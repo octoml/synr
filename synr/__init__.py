@@ -6,4 +6,5 @@ embedded domain specific langauges.
 
 __version__ = '0.1.0'
 
-from .ast import to_ast
+from .compiler import to_ast
+from .simple_diagnostic import SimpleDiagnosticCtx

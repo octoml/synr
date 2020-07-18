@@ -1,57 +1,49 @@
+from __future__ import annotations
+
 import attr
-import ast
-import inspect
-from typing import Optional, Any
-
-from .diagnostic_context import DiagnosticContext
-
-class Node:
-    pass
+from typing import Optional, Any, List
 
 @attr.s(auto_attribs=True)
 class Span:
     start_line: int
     start_column: int
-    end_line: int
-    end_column: int
+    end_line: Optional[int]
+    end_column: Optional[int]
 
-class Parameters:
+    @staticmethod
+    def from_ast(node: ast.AST) -> Span:
+        return Span(node.lineno, node.col_offset, node.end_lineno, node.end_col_offset)
+
+@attr.s(auto_attribs=True)
+class Node:
+    span: Span
+
+class Parameters(Node):
     pass
 
-class Type:
+class Type(Node):
     pass
 
-class Stmt:
+class Stmt(Node):
+    pass
+
+class Expr(Node):
+    pass
+
+class Module(Node):
     pass
 
 @attr.s(auto_attribs=True)
-class Function:
+class Var(Expr):
+    name: str
+
+@attr.s(auto_attribs=True)
+class Return(Stmt):
+    value: Optional[Expr]
+
+@attr.s(auto_attribs=True)
+class Function(Stmt):
     name: str
     params: Parameters
     ret_type: Type
     body: Stmt
-
-class Transformer:
-    pass
-
-class Compiler:
-    transformer: Optional[Transformer]
-    diagnostic_ctx: DiagnosticContext
-
-    def __init__(self, transformer: Optional[Transformer], diagnostic_ctx: DiagnosticContext)
-
-    def compile(self, program: ast.AST) -> Any:
-        if isinstance(program, ast.FunctionDef):
-            name = program.name
-            args = program.args
-            body = program.body
-
-        import pdb; pdb.set_trace()
-
-
-def span_for(node: ast.AST) -> Span:
-    import pdb; pdb.set_trace()
-
-def to_ast(program_src, diagnostic_ctx, transformer):
-
-    import pdb; pdb.set_trace()
