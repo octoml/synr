@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import ast as py_ast
+
 import attr
 from typing import Optional, Any, List, Dict
 
@@ -11,8 +13,10 @@ class Span:
     end_column: Optional[int]
 
     @staticmethod
-    def from_ast(node: ast.AST) -> Span:
+    def from_ast(node: py_ast.AST) -> Span:
         return Span(node.lineno, node.col_offset + 1, node.end_lineno, node.end_col_offset + 1)
+
+Id = str
 
 @attr.s(auto_attribs=True)
 class Node:
@@ -20,8 +24,8 @@ class Node:
 
 @attr.s(auto_attribs=True)
 class Parameter(Node):
-    name: str
-    ty: Type
+    name: Id
+    ty: Optional[Type]
 
 class Type(Node):
     pass
@@ -34,19 +38,24 @@ class Expr(Node):
 
 @attr.s(auto_attribs=True)
 class Module(Node):
-    funcs: Dict[str, Function]
+    funcs: Dict[Id, Function]
 
 @attr.s(auto_attribs=True)
 class Var(Expr):
-    name: str
+    name: Id
 
 @attr.s(auto_attribs=True)
 class Return(Stmt):
     value: Optional[Expr]
 
 @attr.s(auto_attribs=True)
+class Assign(Stmt):
+    lhs: Id
+    rhs: Expr
+
+@attr.s(auto_attribs=True)
 class Function(Stmt):
-    name: str
+    name: Id
     params: List[Parameter]
     ret_type: Type
     body: Stmt

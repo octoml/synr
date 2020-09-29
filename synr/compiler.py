@@ -53,13 +53,53 @@ class Compiler:
 
         return self.compile_stmt(stmts[0])
 
+    def compile_args_to_params(self, args: py_ast.arguments) -> List[Parameter]:
+        # TODO: arguments object doesn't have line column so its either the
+        # functions span needs to be passed or we need to reconstruct span
+        # information from arg objects.
+        #
+        # The below solution is temporary hack.
+        span = self.span_from_ast(args.args[0])
+
+        if len(args.posonlyargs):
+            self.error(
+                "currently synr only supports non-position only arguments",
+                span)
+
+        if args.vararg:
+            self.error(
+                "currently synr does not support varargs",
+                span)
+
+        if len(args.kw_defaults):
+            self.error(
+                "currently synr does not support kw_defaults",
+                span
+            )
+
+        if args.kwarg:
+            self.error(
+                "currently synr does not support kwarg"
+            )
+
+        if args.defaults:
+            self.error("currently synr does not support defaults", span)
+
+        params = []
+        for arg in args.args:
+            span = self.span_from_ast(arg)
+            params.append(Parameter(span, arg.arg, None))
+
+        return params
+
     def compile_stmt(self, stmt: py_ast.stmt) -> Stmt:
         stmt_span = self.span_from_ast(stmt)
         if isinstance(stmt, py_ast.FunctionDef):
             name = stmt.name
             args = stmt.args
+            params = self.compile_args_to_params(args)
             body = self.compile_func_body(stmt.body)
-            return Function(stmt_span, name, [], Type(None), body)
+            return Function(stmt_span, name, params, Type(None), body)
         elif isinstance(stmt, py_ast.Return):
             if stmt.value:
                 value = self.compile_expr(stmt.value)

@@ -24,6 +24,9 @@ def identity(x):
 def test_id_function():
     module = to_ast(identity)
     ast_fn = assert_one_fn(module, "identity", no_params=1)
-    assert ast_fn.body, "must have a body"
+    assert isinstance(ast_fn.body, synr.ast.Return)
+    return_var = ast_fn.body.value
+    assert isinstance(return_var, synr.ast.Var)
+    assert return_var.name == "x"
 
 test_id_function()
