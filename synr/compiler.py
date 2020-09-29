@@ -75,4 +75,5 @@ def to_ast(program: Any, diagnostic_ctx: DiagnosticContext, transformer: Optiona
     program_ast = py_ast.parse(source)
     compiler = Compiler(transformer, diagnostic_ctx)
     assert isinstance(program_ast, py_ast.Module), "support module"
-    return compiler.compile_module(program_ast)
+    prog = compiler.compile_module(program_ast)
+    diagnostic_ctx.diag_ctx.render()
