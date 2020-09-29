@@ -19,3 +19,5 @@ def test_id_function():
     fn_ast = to_ast(identity)
     # TODO test asserts
     import pdb; pdb.set_trace()
+
+test_id_function()

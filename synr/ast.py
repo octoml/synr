@@ -12,7 +12,7 @@ class Span:
 
     @staticmethod
     def from_ast(node: ast.AST) -> Span:
-        return Span(node.lineno, node.col_offset, node.end_lineno, node.end_col_offset)
+        return Span(node.lineno, node.col_offset + 1, node.end_lineno, node.end_col_offset + 1)
 
 @attr.s(auto_attribs=True)
 class Node:

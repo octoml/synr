@@ -10,15 +10,23 @@ from .diagnostic_context import DiagnosticContext
 from .transformer import Transformer
 
 class Compiler:
+    start_line: int
     transformer: Optional[Transformer]
     diagnostic_ctx: DiagnosticContext
 
-    def __init__(self, transformer: Optional[Transformer], diagnostic_ctx: DiagnosticContext):
+    def __init__(self, start_line: int, transformer: Optional[Transformer], diagnostic_ctx: DiagnosticContext):
+        self.start_line = 0 # start_line
         self.transformer = transformer
         self.diagnostic_ctx = diagnostic_ctx
 
     def error(self, message, span):
         self.diagnostic_ctx.emit("error", message, span)
+
+    def span_from_ast(self, node: py_ast.AST):
+        span = Span.from_ast(node)
+        span.start_line += self.start_line
+        span.end_line += self.start_line
+        return span
 
     def compile_module(self, program: py_ast.Module) -> Any:
         funcs = []
@@ -28,7 +36,7 @@ class Compiler:
                 new_func = self.compile_stmt(stmt)
                 funcs.append(new_func)
             else:
-                span = Span.from_ast(program)
+                span = self.span_from_ast(program)
                 self.error(
                     "can only transform top-level functions, other statements are invalid",
                     span)
@@ -44,7 +52,7 @@ class Compiler:
         return self.compile_stmt(stmts[0])
 
     def compile_stmt(self, stmt: py_ast.stmt) -> Stmt:
-        stmt_span = Span.from_ast(stmt)
+        stmt_span = self.span_from_ast(stmt)
         if isinstance(stmt, py_ast.FunctionDef):
             name = stmt.name
             args = stmt.args
@@ -70,10 +78,12 @@ class Compiler:
 def to_ast(program: Any, diagnostic_ctx: DiagnosticContext, transformer: Optional[Transformer] = None):
     source_name = inspect.getsourcefile(program)
     assert source_name, "source name must be valid"
-    source = inspect.getsource(program)
+    lines, start_line = inspect.getsourcelines(program)
+    source = "".join(lines)
     diagnostic_ctx.add_source(source_name, source)
     program_ast = py_ast.parse(source)
-    compiler = Compiler(transformer, diagnostic_ctx)
+    compiler = Compiler(start_line, transformer, diagnostic_ctx)
     assert isinstance(program_ast, py_ast.Module), "support module"
     prog = compiler.compile_module(program_ast)
     diagnostic_ctx.diag_ctx.render()
+    return prog
