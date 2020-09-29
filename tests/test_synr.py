@@ -12,6 +12,7 @@ def to_ast(program: Any) -> Any:
     return synr.to_ast(program, diag_ctx, transformer)
 
 def identity(x):
+    y = x
     return x
 
 def test_id_function():
