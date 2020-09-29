@@ -29,18 +29,20 @@ class Compiler:
         return span
 
     def compile_module(self, program: py_ast.Module) -> Any:
-        funcs = []
+        funcs: Dict[str, Function] = {}
+        # Merge later
+        span = self.span_from_ast(program.body[0])
         for stmt in program.body:
             # need to build module
             if isinstance(stmt, py_ast.FunctionDef):
                 new_func = self.compile_stmt(stmt)
-                funcs.append(new_func)
+                assert isinstance(new_func, Function)
+                funcs[stmt.name] = new_func
             else:
-                span = self.span_from_ast(program)
                 self.error(
                     "can only transform top-level functions, other statements are invalid",
                     span)
-        return funcs
+        return Module(span, funcs)
 
     def compile_func_body(self, stmts: List[py_ast.stmt]) -> Stmt:
         if len(stmts) != 1:
@@ -57,7 +59,7 @@ class Compiler:
             name = stmt.name
             args = stmt.args
             body = self.compile_func_body(stmt.body)
-            return Function(stmt_span, name, Parameters(None), Type(None), body)
+            return Function(stmt_span, name, [], Type(None), body)
         elif isinstance(stmt, py_ast.Return):
             if stmt.value:
                 value = self.compile_expr(stmt.value)

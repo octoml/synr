@@ -11,13 +11,19 @@ def to_ast(program: Any) -> Any:
     transformer = None
     return synr.to_ast(program, diag_ctx, transformer)
 
+def assert_one_fn(module, name, no_params=None):
+    func = module.funcs.get(name)
+    assert func, "the function was not found"
+    if no_params:
+        assert len(func.params) == no_params, "the parameters do not match"
+    return func
+
 def identity(x):
-    y = x
     return x
 
 def test_id_function():
-    fn_ast = to_ast(identity)
-    # TODO test asserts
-    import pdb; pdb.set_trace()
+    module = to_ast(identity)
+    ast_fn = assert_one_fn(module, "identity", no_params=1)
+    assert ast_fn.body, "must have a body"
 
 test_id_function()

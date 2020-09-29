@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import attr
-from typing import Optional, Any, List
+from typing import Optional, Any, List, Dict
 
 @attr.s(auto_attribs=True)
 class Span:
@@ -18,8 +18,10 @@ class Span:
 class Node:
     span: Span
 
-class Parameters(Node):
-    pass
+@attr.s(auto_attribs=True)
+class Parameter(Node):
+    name: str
+    ty: Type
 
 class Type(Node):
     pass
@@ -30,8 +32,9 @@ class Stmt(Node):
 class Expr(Node):
     pass
 
+@attr.s(auto_attribs=True)
 class Module(Node):
-    pass
+    funcs: Dict[str, Function]
 
 @attr.s(auto_attribs=True)
 class Var(Expr):
@@ -44,6 +47,6 @@ class Return(Stmt):
 @attr.s(auto_attribs=True)
 class Function(Stmt):
     name: str
-    params: Parameters
+    params: List[Parameter]
     ret_type: Type
     body: Stmt
