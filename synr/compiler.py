@@ -57,7 +57,7 @@ class Compiler:
             else:
                 return Return(stmt_span, None)
         else:
-            raise Exception(f"found {type(stmt)}")
+            self.error(f"found {type(stmt)}", stmt_span)
 
     def compile_expr(self, expr: py_ast.expr) -> Expr:
         expr_span = Span.from_ast(expr)
