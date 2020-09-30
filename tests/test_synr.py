@@ -53,9 +53,11 @@ def test_class():
     assert isinstance(return_var, synr.ast.Constant)
     assert return_var.value == 3
 
+
 def func_for():
     for x in range(3):
         return x
+
 
 def test_for():
     module = to_ast(func_for)
@@ -69,24 +71,30 @@ def test_for():
     assert isinstance(fr.body.stmts[0], synr.ast.Return)
     assert fr.body.stmts[0].value.name == "x"
 
+
 def func_with():
     with x as y:
         return x
+
 
 def test_with():
     module = to_ast(func_with)
     fn = assert_one_fn(module, "func_with", no_params=0)
     wth = fn.body.stmts[0]
-    assert isinstance(wth, synr.ast.With), "Did not find With statement, found %s" % type(wth)
+    assert isinstance(
+        wth, synr.ast.With
+    ), "Did not find With statement, found %s" % type(wth)
     assert wth.lhs.name == "x"
     assert wth.rhs.name == "y"
     assert isinstance(wth.body.stmts[0], synr.ast.Return)
     assert wth.body.stmts[0].value.name == "x"
 
+
 def func_block():
     y = x
     z = y
     return z
+
 
 def test_block():
     module = to_ast(func_block)
@@ -98,8 +106,10 @@ def test_block():
     assert isinstance(block.stmts[1], synr.ast.Assign)
     assert isinstance(block.stmts[2], synr.ast.Return)
 
+
 def func_assign():
     y = 2
+
 
 def test_assign():
     module = to_ast(func_assign)
