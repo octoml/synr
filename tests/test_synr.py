@@ -32,7 +32,7 @@ def test_id_function():
     ast_fn = assert_one_fn(module, "identity", no_params=1)
     return_var = ast_fn.body.stmts[-1].value
     assert isinstance(return_var, synr.ast.Var)
-    assert return_var.name == "x"
+    assert return_var.name.full_name == "x"
 
 
 class ExampleClass:
@@ -64,12 +64,12 @@ def test_for():
     fn = assert_one_fn(module, "func_for", no_params=0)
     fr = fn.body.stmts[0]
     assert isinstance(fr, synr.ast.For), "Did not find for loop"
-    assert fr.lhs.name == "x", "For lhs is incorrect"
+    assert fr.lhs.name.full_name == "x", "For lhs is incorrect"
     assert isinstance(fr.rhs, synr.ast.Call)
-    assert fr.rhs.name.name == "range"
+    assert fr.rhs.name.name.full_name == "range"
     assert fr.rhs.params[0].value == 3
     assert isinstance(fr.body.stmts[0], synr.ast.Return)
-    assert fr.body.stmts[0].value.name == "x"
+    assert fr.body.stmts[0].value.name.full_name == "x"
 
 
 def func_with():
@@ -84,10 +84,10 @@ def test_with():
     assert isinstance(
         wth, synr.ast.With
     ), "Did not find With statement, found %s" % type(wth)
-    assert wth.lhs.name == "x"
-    assert wth.rhs.name == "y"
+    assert wth.lhs.name.full_name == "x"
+    assert wth.rhs.name.full_name == "y"
     assert isinstance(wth.body.stmts[0], synr.ast.Return)
-    assert wth.body.stmts[0].value.name == "x"
+    assert wth.body.stmts[0].value.name.full_name == "x"
 
 
 def func_block():
@@ -117,9 +117,20 @@ def test_assign():
     assign = fn.body.stmts[0]
     assert isinstance(assign, synr.ast.Assign)
     assert isinstance(assign.lhs, synr.ast.Var)
-    assert assign.lhs.name == "y"
+    assert assign.lhs.name.full_name == "y"
     assert isinstance(assign.rhs, synr.ast.Constant)
     assert assign.rhs.value == 2
+
+
+def func_var():
+    return x.y.z
+
+
+def test_var():
+    module = to_ast(func_var)
+    fn = assert_one_fn(module, "func_var", no_params=0)
+    ret = fn.body.stmts[0]
+    assert ret.value.name.names == ["x", "y", "z"]
 
 
 if __name__ == "__main__":
@@ -129,3 +140,4 @@ if __name__ == "__main__":
     test_with()
     test_block()
     test_assign()
+    test_var()

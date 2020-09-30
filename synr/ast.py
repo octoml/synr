@@ -39,7 +39,30 @@ class Span:
         return Span(-1, -1, -1, -1)
 
 
-Id = str
+@attr.s(auto_attribs=True)
+class Id:
+    names: List[str]
+
+    @staticmethod
+    def from_str(s: str) -> Id:
+        """Parse and Id from a `.` separated string."""
+        return Id(s.split("."))
+
+    @staticmethod
+    def invalid() -> Id:
+        return Id([])
+
+    @property
+    def full_name(self) -> str:
+        """A `.` seperated string of the fully qualified Id"""
+        return ".".join(self.names)
+
+    @property
+    def base_name(self) -> str:
+        """Unqualified name of the Id"""
+        return self.names[-1]
+
+Name = str
 
 
 @attr.s(auto_attribs=True)
@@ -49,7 +72,7 @@ class Node:
 
 @attr.s(auto_attribs=True)
 class Parameter(Node):
-    name: Id
+    name: Name
     ty: Optional[Type]
 
 
@@ -67,12 +90,16 @@ class Expr(Node):
 
 @attr.s(auto_attribs=True)
 class Module(Node):
-    funcs: Dict[Id, Union[Class, Function]]
+    funcs: Dict[Name, Union[Class, Function]]
 
 
 @attr.s(auto_attribs=True)
 class Var(Expr):
     name: Id
+
+    @staticmethod
+    def invalid() -> Var:
+        return Var(Span.invalid(), name.invalid())
 
 
 @attr.s(auto_attribs=True)
@@ -99,7 +126,7 @@ class Assign(Stmt):
 
 @attr.s(auto_attribs=True)
 class Function(Node):
-    name: Id
+    name: Name
     params: List[Parameter]
     ret_type: Type
     body: Block
@@ -126,4 +153,4 @@ class With(Stmt):
 
 @attr.s(auto_attribs=True)
 class Class(Node):
-    funcs: List[Function]
+    funcs: Dict[Name, Function]

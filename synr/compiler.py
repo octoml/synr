@@ -150,7 +150,7 @@ class Compiler:
                     "Left hand side of assignment must be a variable",
                     self.span_from_ast(stmt.targets[0]),
                 )
-                lhs = Var(Span.invalid(), "")
+                lhs = Var(Span.invalid(), Id.invalid())
             rhs = self.compile_expr(stmt.value)
             return Assign(stmt_span, lhs, rhs)
         elif isinstance(stmt, py_ast.For):
@@ -160,7 +160,7 @@ class Compiler:
                     "Left hand side of for loop (the x in `for x in range(...)`) must be a single variable",
                     self.span_from_ast(stmt.target),
                 )
-                lhs = Var(Span.invalid(), "")
+                lhs = Var(Span.invalid(), Id.invalid())
             rhs = self.compile_expr(stmt.iter)
             body = self.compile_block(stmt.body)
             return For(self.span_from_ast(stmt), lhs, rhs, body)
@@ -180,12 +180,12 @@ class Compiler:
                         "Right hand side of with statement (y in `with x as y:`) must be a variable",
                         self.span_from_ast(wth.optional_vars),
                     )
-                    rhs = Var(Span.invalid(), "")
+                    rhs = Var.invalid()
             else:
                 self.error(
                     "With statement must contain an `as _`", self.span_from_ast(wth)
                 )
-                rhs = Var(Span.invalid(), "")
+                rhs = Var.invalid()
             lhs = self.compile_expr(wth.context_expr)
             body = self.compile_block(stmt.body)
             return With(self.span_from_ast(stmt), lhs, rhs, body)
@@ -193,10 +193,22 @@ class Compiler:
             self.error(f"found {type(stmt)}", stmt_span)
             return Stmt(Span.invalid())
 
-    def compile_expr(self, expr: py_ast.expr) -> Expr:
+    def compile_var(self, expr: py_ast.expr) -> Var:
         expr_span = self.span_from_ast(expr)
         if isinstance(expr, py_ast.Name):
-            return Var(expr_span, expr.id)
+            return Var(expr_span, Id([expr.id]))
+        if isinstance(expr, py_ast.Attribute):
+            sub_var = self.compile_var(expr.value)
+            names = sub_var.name.names
+            names.append(expr.attr)
+            return Var(expr_span, Id(names))
+        self.error("Expected a variable name of the form a.b.c", self.expr_span)
+        return Var.invalid()
+
+    def compile_expr(self, expr: py_ast.expr) -> Expr:
+        expr_span = self.span_from_ast(expr)
+        if isinstance(expr, py_ast.Name) or isinstance(expr, py_ast.Attribute):
+            return self.compile_var(expr)
         elif isinstance(expr, py_ast.Constant):
             if isinstance(expr.value, float) or isinstance(expr.value, int):
                 return Constant(expr_span, expr.value)
@@ -221,7 +233,7 @@ class Compiler:
                 f"Expected function name, but got {type(func)}",
                 self.span_from_ast(call.func),
             )
-            func = Var(Span.invalid(), "")
+            func = Var.invalid()
 
         args = []
         for arg in call.args:
