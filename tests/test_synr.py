@@ -46,7 +46,7 @@ def test_class():
     assert cls, "ExampleClass not found"
     assert isinstance(cls, synr.ast.Class), "ExampleClass was not parsed as a Class"
     assert len(cls.funcs) == 1, "func not found"
-    fn = cls.funcs[0]
+    fn = cls.funcs["func"]
     assert isinstance(fn, synr.ast.Function), "func not found"
     assert fn.name == "func", "func not found"
     return_var = fn.body.stmts[-1].value
@@ -133,6 +133,61 @@ def test_var():
     assert ret.value.name.names == ["x", "y", "z"]
 
 
+def func_binop():
+    x = 1 + 2
+    x = 1 - 2
+    x = 1 * 2
+    x = 1 / 2
+    x = 1 // 2
+    x = 1 % 2
+    x = 1 == 2
+    x = 1 != 2
+    x = 1 >= 2
+    x = 1 <= 2
+    x = 1 < 2
+    x = 1 > 2
+    x = not True
+    x = True and False
+    x = True or False
+
+
+def test_binop():
+    module = to_ast(func_binop)
+    fn = assert_one_fn(module, "func_binop", no_params=0)
+    stmts = fn.body.stmts
+
+    def verify(stmt, op, vals):
+        assert isinstance(stmt, synr.ast.Call)
+        assert stmt.name.name == op, f"Expect {op.name}, got {stmt.name.name}"
+        assert len(vals) == len(stmt.params)
+        for i in range(len(vals)):
+            assert stmt.params[i].value == vals[i]
+
+    verify(stmts[0].rhs, synr.ast.BuiltinOp.Add, [1, 2])
+    verify(stmts[1].rhs, synr.ast.BuiltinOp.Sub, [1, 2])
+    verify(stmts[2].rhs, synr.ast.BuiltinOp.Mul, [1, 2])
+    verify(stmts[3].rhs, synr.ast.BuiltinOp.Div, [1, 2])
+    verify(stmts[4].rhs, synr.ast.BuiltinOp.FloorDiv, [1, 2])
+    verify(stmts[5].rhs, synr.ast.BuiltinOp.Mod, [1, 2])
+    verify(stmts[6].rhs, synr.ast.BuiltinOp.Eq, [1, 2])
+
+    assert isinstance(stmts[7].rhs, synr.ast.Call)
+    assert stmts[7].rhs.name.name == synr.ast.BuiltinOp.Not
+    assert len(stmts[7].rhs.params) == 1
+    call = stmts[7].rhs.params[0]
+    assert call.name.name == synr.ast.BuiltinOp.Eq
+    assert call.params[0].value == 1
+    assert call.params[1].value == 2
+
+    verify(stmts[8].rhs, synr.ast.BuiltinOp.GE, [1, 2])
+    verify(stmts[9].rhs, synr.ast.BuiltinOp.LE, [1, 2])
+    verify(stmts[10].rhs, synr.ast.BuiltinOp.LT, [1, 2])
+    verify(stmts[11].rhs, synr.ast.BuiltinOp.GT, [1, 2])
+    verify(stmts[12].rhs, synr.ast.BuiltinOp.Not, [True])
+    verify(stmts[13].rhs, synr.ast.BuiltinOp.And, [True, False])
+    verify(stmts[14].rhs, synr.ast.BuiltinOp.Or, [True, False])
+
+
 if __name__ == "__main__":
     test_id_function()
     test_class()
@@ -141,3 +196,4 @@ if __name__ == "__main__":
     test_block()
     test_assign()
     test_var()
+    test_binop()

@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast as py_ast
 
 import attr
+from enum import Enum, auto
 from typing import Optional, Any, List, Dict, Union
 
 
@@ -34,6 +35,13 @@ class Span:
 
         return Span(start_line, start_col, end_line, end_col)
 
+    def between(self, span: Span) -> Span:
+        """The span between two spans"""
+        return Span(self.end_line, self.end_column, span.start_line, span.start_column)
+
+    def subtract(self, span: Span) -> Span:
+        return Span(self.start_line, self.start_column, span.start_line, span.start_column)
+
     @staticmethod
     def invalid() -> Span:
         return Span(-1, -1, -1, -1)
@@ -61,6 +69,7 @@ class Id:
     def base_name(self) -> str:
         """Unqualified name of the Id"""
         return self.names[-1]
+
 
 Name = str
 
@@ -102,6 +111,29 @@ class Var(Expr):
         return Var(Span.invalid(), name.invalid())
 
 
+class BuiltinOp(Enum):
+    Add = auto()
+    Sub = auto()
+    Mul = auto()
+    Div = auto()
+    FloorDiv = auto()
+    Mod = auto()
+    SubScript = auto()
+    And = auto()
+    Or = auto()
+    Eq = auto()
+    GT = auto()
+    GE = auto()
+    LT = auto()
+    LE = auto()
+    Not = auto()
+
+
+@attr.s(auto_attribs=True)
+class Op(Node):
+    name: BuiltinOp
+
+
 @attr.s(auto_attribs=True)
 class Constant(Expr):
     value: Union[float, int]
@@ -109,7 +141,7 @@ class Constant(Expr):
 
 @attr.s(auto_attribs=True)
 class Call(Expr):
-    name: Var
+    name: Union[Var, Op]
     params: List[Expr]
 
 

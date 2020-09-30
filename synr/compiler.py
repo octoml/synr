@@ -15,6 +15,23 @@ class Compiler:
     transformer: Optional[Transformer]
     diagnostic_ctx: DiagnosticContext
 
+    builtin_ops = {
+        py_ast.Add: BuiltinOp.Add,
+        py_ast.Sub: BuiltinOp.Sub,
+        py_ast.Mult: BuiltinOp.Mul,
+        py_ast.Div: BuiltinOp.Div,
+        py_ast.FloorDiv: BuiltinOp.FloorDiv,
+        py_ast.Mod: BuiltinOp.Mod,
+        py_ast.Eq: BuiltinOp.Eq,
+        py_ast.GtE: BuiltinOp.GE,
+        py_ast.LtE: BuiltinOp.LE,
+        py_ast.Gt: BuiltinOp.GT,
+        py_ast.Lt: BuiltinOp.LT,
+        py_ast.Not: BuiltinOp.Not,
+        py_ast.Or: BuiltinOp.Or,
+        py_ast.And: BuiltinOp.And,
+    }
+
     def __init__(
         self,
         start_line: int,
@@ -28,7 +45,7 @@ class Compiler:
     def error(self, message, span):
         self.diagnostic_ctx.emit("error", message, span)
 
-    def span_from_ast(self, node: py_ast.AST):
+    def span_from_ast(self, node: py_ast.AST) -> Span:
         if isinstance(node, py_ast.withitem):
             span = Span.from_ast(node.context_expr)
             if node.optional_vars:
@@ -40,8 +57,15 @@ class Compiler:
         span.end_line += self.start_line
         return span
 
+    def span_from_asts(self, nodes: List[py_ast.AST]) -> Span:
+        assert len(nodes) > 0
+        span = self.span_from_ast(nodes[0])
+        for node in nodes[1:]:
+            span = span.merge(self.span_from_ast(node))
+        return span
+
     def compile_module(self, program: py_ast.Module) -> Any:
-        funcs: Dict[str, Union[Function, Class]] = {}
+        funcs: Dict[Name, Union[Function, Class]] = {}
         # Merge later
         span = self.span_from_ast(program.body[0])
         for stmt in program.body:
@@ -66,7 +90,7 @@ class Compiler:
             len(stmts) != 0
         ), "Internal Error: python ast forbids empty function bodies."
         return Block(
-            self.span_from_ast(stmts[0]).merge(self.span_from_ast(stmts[-1])),
+            self.span_from_asts(stmts),
             [self.compile_stmt(st) for st in stmts],
         )
 
@@ -80,9 +104,7 @@ class Compiler:
         if len(args.posonlyargs):
             self.error(
                 "currently synr only supports non-position only arguments",
-                self.span_from_ast(args.posonlyargs[0]).merge(
-                    self.span_from_ast(args.posonlyargs[-1])
-                ),
+                self.span_from_asts(args.posonlyargs)
             )
 
         if args.vararg:
@@ -94,9 +116,7 @@ class Compiler:
         if len(args.kw_defaults):
             self.error(
                 "currently synr does not support kw_defaults",
-                self.span_from_ast(args.kw_defaults[0]).merge(
-                    self.span_from_ast(args.kw_defaults[-1])
-                ),
+                self.span_from_asts(args.kw_defaults)
             )
 
         if args.kwarg:
@@ -107,9 +127,7 @@ class Compiler:
         if len(args.defaults) > 0:
             self.error(
                 "currently synr does not support defaults",
-                self.span_from_ast(args.defaults[0]).merge(
-                    self.span_from_ast(args.defaults[-1])
-                ),
+                self.span_from_asts(args.defaults)
             )
 
         params = []
@@ -168,9 +186,7 @@ class Compiler:
             if len(stmt.items) != 1:
                 self.error(
                     "Only one `x as y` statement allowed in with statements",
-                    self.span_from_ast(stmt.items[0]).merge(
-                        self.span_from_ast(stmt.items[-1])
-                    ),
+                    self.span_from_asts(stmt.items)
                 )
             wth = stmt.items[0]
             if wth.optional_vars:
@@ -209,12 +225,69 @@ class Compiler:
         expr_span = self.span_from_ast(expr)
         if isinstance(expr, py_ast.Name) or isinstance(expr, py_ast.Attribute):
             return self.compile_var(expr)
-        elif isinstance(expr, py_ast.Constant):
+        if isinstance(expr, py_ast.Constant):
             if isinstance(expr.value, float) or isinstance(expr.value, int):
                 return Constant(expr_span, expr.value)
             self.error("Only float and int constants are allowed", expr_span)
-        elif isinstance(expr, py_ast.Call):
+        if isinstance(expr, py_ast.Call):
             return self.compile_call(expr)
+        if isinstance(expr, py_ast.BinOp):
+            lhs = self.compile_expr(expr.left)
+            rhs = self.compile_expr(expr.right)
+            op_span = lhs.span.between(rhs.span)
+            ty = type(expr.op)
+            op = self.builtin_ops.get(ty)
+            if op is None:
+                self.error(
+                    f"Binary operator {ty} is not supported",
+                    op_span,
+                )
+            return Call(expr_span, Op(op_span, op), [lhs, rhs])
+        if isinstance(expr, py_ast.Compare):
+            lhs = self.compile_expr(expr.left)
+            if len(expr.ops) != 1 or len(expr.comparators) != 1 or len(expr.comparators) != len(expr.ops):
+                self.error("Only one comparison operator is allowed", self.span_from_asts(expr.comparators))
+            rhs = self.compile_expr(expr.comparators[0])
+            op_span = lhs.span.between(rhs.span)
+            ty = type(expr.ops[0])
+            # Desugar `a != b` to `not (a == b)`
+            if ty == py_ast.NotEq:
+                return Call(expr_span, Op(op_span, BuiltinOp.Not), [Call(expr_span, Op(op_span, BuiltinOp.Eq), [lhs, rhs])])
+            op = self.builtin_ops.get(ty)
+            if op is None:
+                self.error(
+                    f"Binary operator {ty} is not supported",
+                    op_span,
+                )
+            return Call(expr_span, Op(op_span, op), [lhs, rhs])
+        if isinstance(expr, py_ast.UnaryOp):
+            lhs = self.compile_expr(expr.operand)
+            op_span = expr_span.subtract(lhs.span)
+            ty = type(expr.op)
+            op = self.builtin_ops.get(ty)
+            if op is None:
+                self.error(
+                    f"Binary operator {ty} is not supported",
+                    op_span,
+                )
+            return Call(expr_span, Op(op_span, op), [lhs])
+        if isinstance(expr, py_ast.BoolOp):
+            lhs = self.compile_expr(expr.values[0])
+            rhs = self.compile_expr(expr.values[1])
+            op_span = lhs.span.between(rhs.span)
+            ty = type(expr.op)
+            op = self.builtin_ops.get(ty)
+            if op is None:
+                self.error(
+                    f"Binary operator {ty} is not supported",
+                    op_span,
+                )
+            call = Call(lhs.span.merge(rhs.span), Op(op_span, op), [lhs, rhs])
+            for arg in expr.values[2:]:
+                rhs = self.compile_expr(arg)
+                call = Call(call.span.merge(rhs.span), Op(call.span.between(rhs.span), op), [call, rhs])
+            return call
+
         self.error(f"Unexpected expression {type(expr)}", expr_span)
         return Expr(Span.invalid())
 
@@ -222,9 +295,7 @@ class Compiler:
         if len(call.keywords) > 0:
             self.error(
                 "Keyword arguments are not allowed",
-                self.span_from_ast(call.keywords[0]).merge(
-                    self.span_from_ast(call.keywords[-1])
-                ),
+                self.span_from_asts(call.keywords)
             )
 
         func = self.compile_expr(call.func)
@@ -243,7 +314,7 @@ class Compiler:
 
     def compile_class(self, cls: py_ast.ClassDef) -> Class:
         span = self.span_from_ast(cls)
-        funcs = []
+        funcs: Dict[Name, Function] = {}
         for func in cls.body:
             func_span = self.span_from_ast(func)
             f = self.compile_def(func)
@@ -251,7 +322,7 @@ class Compiler:
                 self.error(
                     "Only functions definitions are allowed within a class", func_span
                 )
-            funcs.append(f)
+            funcs[f.name] = f
         return Class(span, funcs)
 
 
