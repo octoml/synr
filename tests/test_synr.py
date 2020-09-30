@@ -35,20 +35,20 @@ def test_id_function():
     assert return_var.name == "x"
 
 
-class TestClass:
-    def test_func():
+class ExampleClass:
+    def func():
         return 3
 
 
 def test_class():
-    module = to_ast(TestClass)
-    cls = module.funcs.get("TestClass")
-    assert cls, "TestClass not found"
-    assert isinstance(cls, synr.ast.Class), "Class was not parsed as a Class"
-    assert len(cls.funcs) == 1, "test_func not found"
+    module = to_ast(ExampleClass)
+    cls = module.funcs.get("ExampleClass")
+    assert cls, "ExampleClass not found"
+    assert isinstance(cls, synr.ast.Class), "ExampleClass was not parsed as a Class"
+    assert len(cls.funcs) == 1, "func not found"
     fn = cls.funcs[0]
-    assert isinstance(fn, synr.ast.Function), "test_func not found"
-    assert fn.name == "test_func", "test_func not found"
+    assert isinstance(fn, synr.ast.Function), "func not found"
+    assert fn.name == "func", "func not found"
     return_var = fn.body.stmts[-1].value
     assert isinstance(return_var, synr.ast.Constant)
     assert return_var.value == 3
@@ -83,9 +83,39 @@ def test_with():
     assert isinstance(wth.body.stmts[0], synr.ast.Return)
     assert wth.body.stmts[0].value.name == "x"
 
+def func_block():
+    y = x
+    z = y
+    return z
+
+def test_block():
+    module = to_ast(func_block)
+    fn = assert_one_fn(module, "func_block", no_params=0)
+    block = fn.body
+    assert isinstance(block, synr.ast.Block)
+    assert len(block.stmts) == 3
+    assert isinstance(block.stmts[0], synr.ast.Assign)
+    assert isinstance(block.stmts[1], synr.ast.Assign)
+    assert isinstance(block.stmts[2], synr.ast.Return)
+
+def func_assign():
+    y = 2
+
+def test_assign():
+    module = to_ast(func_assign)
+    fn = assert_one_fn(module, "func_assign", no_params=0)
+    assign = fn.body.stmts[0]
+    assert isinstance(assign, synr.ast.Assign)
+    assert isinstance(assign.lhs, synr.ast.Var)
+    assert assign.lhs.name == "y"
+    assert isinstance(assign.rhs, synr.ast.Constant)
+    assert assign.rhs.value == 2
+
 
 if __name__ == "__main__":
     test_id_function()
     test_class()
     test_for()
     test_with()
+    test_block()
+    test_assign()
