@@ -40,7 +40,9 @@ class Span:
         return Span(self.end_line, self.end_column, span.start_line, span.start_column)
 
     def subtract(self, span: Span) -> Span:
-        return Span(self.start_line, self.start_column, span.start_line, span.start_column)
+        return Span(
+            self.start_line, self.start_column, span.start_line, span.start_column
+        )
 
     @staticmethod
     def invalid() -> Span:
@@ -108,7 +110,7 @@ class Var(Expr):
 
     @staticmethod
     def invalid() -> Var:
-        return Var(Span.invalid(), name.invalid())
+        return Var(Span.invalid(), Id.invalid())
 
 
 class BuiltinOp(Enum):
@@ -127,6 +129,7 @@ class BuiltinOp(Enum):
     LT = auto()
     LE = auto()
     Not = auto()
+    Invalid = auto()  # placeholder op if op failed to parse
 
 
 @attr.s(auto_attribs=True)
@@ -181,6 +184,13 @@ class With(Stmt):
     lhs: Expr
     rhs: Var
     body: Block
+
+
+@attr.s(auto_attribs=True)
+class If(Stmt):
+    condition: Expr
+    true: Block
+    false: Block
 
 
 @attr.s(auto_attribs=True)

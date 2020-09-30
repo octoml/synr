@@ -188,6 +188,35 @@ def test_binop():
     verify(stmts[14].rhs, synr.ast.BuiltinOp.Or, [True, False])
 
 
+def func_if():
+    if 1 and 2 and 3 or 4:
+        return 1
+    elif 1:
+        return 2
+    else:
+        return 3
+
+
+def test_if():
+    module = to_ast(func_if)
+    fn = assert_one_fn(module, "func_if", no_params=0)
+
+    if_stmt = fn.body.stmts[0]
+    assert isinstance(if_stmt, synr.ast.If)
+    assert isinstance(if_stmt.true.stmts[0], synr.ast.Return)
+    assert if_stmt.true.stmts[0].value.value == 1
+    cond = if_stmt.condition
+    assert isinstance(cond, synr.ast.Call)
+    assert cond.name.name == synr.ast.BuiltinOp.Or
+    assert cond.params[1].value == 4
+    elif_stmt = if_stmt.false.stmts[0]
+    assert isinstance(elif_stmt.true.stmts[0], synr.ast.Return)
+    assert elif_stmt.true.stmts[0].value.value == 2
+    assert elif_stmt.condition.value == 1
+    assert isinstance(elif_stmt.false.stmts[0], synr.ast.Return)
+    assert elif_stmt.false.stmts[0].value.value == 3
+
+
 if __name__ == "__main__":
     test_id_function()
     test_class()
@@ -197,3 +226,4 @@ if __name__ == "__main__":
     test_assign()
     test_var()
     test_binop()
+    test_if()

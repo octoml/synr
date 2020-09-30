@@ -3,7 +3,7 @@ from __future__ import annotations
 import attr
 import ast as py_ast
 import inspect
-from typing import Optional, Any, List, Union
+from typing import Optional, Any, List, Union, Sequence
 
 from .ast import *
 from .diagnostic_context import DiagnosticContext
@@ -57,7 +57,7 @@ class Compiler:
         span.end_line += self.start_line
         return span
 
-    def span_from_asts(self, nodes: List[py_ast.AST]) -> Span:
+    def span_from_asts(self, nodes: Sequence[py_ast.AST]) -> Span:
         assert len(nodes) > 0
         span = self.span_from_ast(nodes[0])
         for node in nodes[1:]:
@@ -104,7 +104,7 @@ class Compiler:
         if len(args.posonlyargs):
             self.error(
                 "currently synr only supports non-position only arguments",
-                self.span_from_asts(args.posonlyargs)
+                self.span_from_asts(args.posonlyargs),
             )
 
         if args.vararg:
@@ -116,7 +116,7 @@ class Compiler:
         if len(args.kw_defaults):
             self.error(
                 "currently synr does not support kw_defaults",
-                self.span_from_asts(args.kw_defaults)
+                self.span_from_asts(args.kw_defaults),
             )
 
         if args.kwarg:
@@ -127,7 +127,7 @@ class Compiler:
         if len(args.defaults) > 0:
             self.error(
                 "currently synr does not support defaults",
-                self.span_from_asts(args.defaults)
+                self.span_from_asts(args.defaults),
             )
 
         params = []
@@ -186,7 +186,7 @@ class Compiler:
             if len(stmt.items) != 1:
                 self.error(
                     "Only one `x as y` statement allowed in with statements",
-                    self.span_from_asts(stmt.items)
+                    self.span_from_asts(stmt.items),
                 )
             wth = stmt.items[0]
             if wth.optional_vars:
@@ -205,8 +205,16 @@ class Compiler:
             lhs = self.compile_expr(wth.context_expr)
             body = self.compile_block(stmt.body)
             return With(self.span_from_ast(stmt), lhs, rhs, body)
+        elif isinstance(stmt, py_ast.If):
+            true = self.compile_block(stmt.body)
+            if len(stmt.orelse) > 0:
+                false = self.compile_block(stmt.orelse)
+            else:
+                false = Block(stmt_span, [])  # TODO: this span isn't correct
+            condition = self.compile_expr(stmt.test)
+            return If(stmt_span, condition, true, false)
         else:
-            self.error(f"found {type(stmt)}", stmt_span)
+            self.error(f"Found unexpected {type(stmt)} when compiling stmt", stmt_span)
             return Stmt(Span.invalid())
 
     def compile_var(self, expr: py_ast.expr) -> Var:
@@ -218,7 +226,7 @@ class Compiler:
             names = sub_var.name.names
             names.append(expr.attr)
             return Var(expr_span, Id(names))
-        self.error("Expected a variable name of the form a.b.c", self.expr_span)
+        self.error("Expected a variable name of the form a.b.c", expr_span)
         return Var.invalid()
 
     def compile_expr(self, expr: py_ast.expr) -> Expr:
@@ -242,23 +250,36 @@ class Compiler:
                     f"Binary operator {ty} is not supported",
                     op_span,
                 )
+                op = BuiltinOp.Invalid
             return Call(expr_span, Op(op_span, op), [lhs, rhs])
         if isinstance(expr, py_ast.Compare):
             lhs = self.compile_expr(expr.left)
-            if len(expr.ops) != 1 or len(expr.comparators) != 1 or len(expr.comparators) != len(expr.ops):
-                self.error("Only one comparison operator is allowed", self.span_from_asts(expr.comparators))
+            if (
+                len(expr.ops) != 1
+                or len(expr.comparators) != 1
+                or len(expr.comparators) != len(expr.ops)
+            ):
+                self.error(
+                    "Only one comparison operator is allowed",
+                    self.span_from_asts(expr.comparators),
+                )
             rhs = self.compile_expr(expr.comparators[0])
             op_span = lhs.span.between(rhs.span)
             ty = type(expr.ops[0])
             # Desugar `a != b` to `not (a == b)`
             if ty == py_ast.NotEq:
-                return Call(expr_span, Op(op_span, BuiltinOp.Not), [Call(expr_span, Op(op_span, BuiltinOp.Eq), [lhs, rhs])])
+                return Call(
+                    expr_span,
+                    Op(op_span, BuiltinOp.Not),
+                    [Call(expr_span, Op(op_span, BuiltinOp.Eq), [lhs, rhs])],
+                )
             op = self.builtin_ops.get(ty)
             if op is None:
                 self.error(
                     f"Binary operator {ty} is not supported",
                     op_span,
                 )
+                op = BuiltinOp.Invalid
             return Call(expr_span, Op(op_span, op), [lhs, rhs])
         if isinstance(expr, py_ast.UnaryOp):
             lhs = self.compile_expr(expr.operand)
@@ -270,6 +291,7 @@ class Compiler:
                     f"Binary operator {ty} is not supported",
                     op_span,
                 )
+                op = BuiltinOp.Invalid
             return Call(expr_span, Op(op_span, op), [lhs])
         if isinstance(expr, py_ast.BoolOp):
             lhs = self.compile_expr(expr.values[0])
@@ -282,10 +304,15 @@ class Compiler:
                     f"Binary operator {ty} is not supported",
                     op_span,
                 )
+                op = BuiltinOp.Invalid
             call = Call(lhs.span.merge(rhs.span), Op(op_span, op), [lhs, rhs])
             for arg in expr.values[2:]:
                 rhs = self.compile_expr(arg)
-                call = Call(call.span.merge(rhs.span), Op(call.span.between(rhs.span), op), [call, rhs])
+                call = Call(
+                    call.span.merge(rhs.span),
+                    Op(call.span.between(rhs.span), op),
+                    [call, rhs],
+                )
             return call
 
         self.error(f"Unexpected expression {type(expr)}", expr_span)
@@ -294,8 +321,7 @@ class Compiler:
     def compile_call(self, call: py_ast.Call) -> Call:
         if len(call.keywords) > 0:
             self.error(
-                "Keyword arguments are not allowed",
-                self.span_from_asts(call.keywords)
+                "Keyword arguments are not allowed", self.span_from_asts(call.keywords)
             )
 
         func = self.compile_expr(call.func)
