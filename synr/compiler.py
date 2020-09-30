@@ -51,6 +51,12 @@ class Compiler:
             if node.optional_vars:
                 end_span = Span.from_ast(node.optional_vars)
                 span = span.merge(end_span)
+        elif isinstance(node, py_ast.Slice):
+            left = Span.from_ast(node.lower)
+            right = Span.from_ast(node.upper)
+            span = left.merge(right)
+        elif isinstance(node, py_ast.Index):
+            span = Span.from_ast(node.value)
         else:
             span = Span.from_ast(node)
         span.start_line += self.start_line
@@ -276,7 +282,7 @@ class Compiler:
             op = self.builtin_ops.get(ty)
             if op is None:
                 self.error(
-                    f"Binary operator {ty} is not supported",
+                    f"Comparison operator {ty} is not supported",
                     op_span,
                 )
                 op = BuiltinOp.Invalid
@@ -288,7 +294,7 @@ class Compiler:
             op = self.builtin_ops.get(ty)
             if op is None:
                 self.error(
-                    f"Binary operator {ty} is not supported",
+                    f"Unary operator {ty} is not supported",
                     op_span,
                 )
                 op = BuiltinOp.Invalid
@@ -314,6 +320,25 @@ class Compiler:
                     [call, rhs],
                 )
             return call
+        if isinstance(expr, py_ast.Subscript):
+            if isinstance(expr.slice, py_ast.ExtSlice):
+                slices = [self.compile_expr(d) for d in expr.slice.dims]
+                op_span = self.span_from_asts(expr.slice.dims)
+            else:
+                slices = [self.compile_expr(expr.slice)]
+                op_span = self.span_from_ast(expr.slice)
+            slices = [self.compile_expr(expr.value)] + slices
+            return Call(expr_span, Op(op_span, BuiltinOp.SubScript), slices)
+        if isinstance(expr, py_ast.Index):
+            return self.compile_expr(expr.value)
+        if isinstance(expr, py_ast.Slice):
+            start = self.compile_expr(expr.lower)
+            end = self.compile_expr(expr.upper)
+            if expr.step is None:
+                step = Constant(start.span.between(end.span), 1)
+            else:
+                step = self.compile_expr(expr.step)
+            return Slice(expr_span, start, step, end)
 
         self.error(f"Unexpected expression {type(expr)}", expr_span)
         return Expr(Span.invalid())

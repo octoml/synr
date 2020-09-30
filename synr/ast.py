@@ -149,6 +149,13 @@ class Call(Expr):
 
 
 @attr.s(auto_attribs=True)
+class Slice(Expr):
+    start: Expr
+    step: Expr
+    end: Expr
+
+
+@attr.s(auto_attribs=True)
 class Return(Stmt):
     value: Optional[Expr]
 

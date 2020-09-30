@@ -149,6 +149,7 @@ def func_binop():
     x = not True
     x = True and False
     x = True or False
+    x = (1 + 3) / (4 % 2)
 
 
 def test_binop():
@@ -217,6 +218,28 @@ def test_if():
     assert elif_stmt.false.stmts[0].value.value == 3
 
 
+def func_subscript():
+    z = x[1:2, y]
+    z = x[1.0:3.0:2]
+
+
+def test_subscript():
+    module = to_ast(func_subscript)
+    fn = assert_one_fn(module, "func_subscript", no_params=0)
+
+    sub = fn.body.stmts[0].rhs
+    assert isinstance(sub, synr.ast.Call)
+    assert sub.name.name == synr.ast.BuiltinOp.SubScript
+    assert sub.params[0].name.full_name == "x"
+    assert sub.params[1].start.value == 1
+    assert sub.params[1].step.value == 1
+    assert sub.params[1].end.value == 2
+    assert sub.params[2].name.full_name == "y"
+
+    sub2 = fn.body.stmts[1].rhs
+    assert sub2.params[1].step.value == 2
+
+
 if __name__ == "__main__":
     test_id_function()
     test_class()
@@ -227,3 +250,4 @@ if __name__ == "__main__":
     test_var()
     test_binop()
     test_if()
+    test_subscript()
