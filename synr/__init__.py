@@ -4,7 +4,7 @@ for the core of the Python programming language for building
 embedded domain specific langauges.
 """
 
-__version__ = '0.1.0'
+__version__ = "0.1.0"
 
 from .compiler import to_ast
 from .tvm_diagnostic import TVMDiagnosticCtx

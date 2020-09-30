@@ -9,13 +9,19 @@ from .ast import *
 from .diagnostic_context import DiagnosticContext
 from .transformer import Transformer
 
+
 class Compiler:
     start_line: int
     transformer: Optional[Transformer]
     diagnostic_ctx: DiagnosticContext
 
-    def __init__(self, start_line: int, transformer: Optional[Transformer], diagnostic_ctx: DiagnosticContext):
-        self.start_line = 0 # start_line
+    def __init__(
+        self,
+        start_line: int,
+        transformer: Optional[Transformer],
+        diagnostic_ctx: DiagnosticContext,
+    ):
+        self.start_line = 0  # start_line
         self.transformer = transformer
         self.diagnostic_ctx = diagnostic_ctx
 
@@ -45,15 +51,16 @@ class Compiler:
             else:
                 self.error(
                     "can only transform top-level functions, other statements are invalid",
-                    span)
+                    span,
+                )
         return Module(span, funcs)
 
     def compile_func_body(self, stmts: List[py_ast.stmt]) -> Stmt:
         if len(stmts) != 1:
             span = Span.from_ast(stmts[0])
             self.error(
-                "currently synr only supports single statement function bodies",
-                span)
+                "currently synr only supports single statement function bodies", span
+            )
 
         return self.compile_stmt(stmts[0])
 
@@ -67,27 +74,33 @@ class Compiler:
         if len(args.posonlyargs):
             self.error(
                 "currently synr only supports non-position only arguments",
-                Span.from_ast(args.posonlyargs[0]).merge(Span.from_ast(args.posonlyargs[-1])))
+                Span.from_ast(args.posonlyargs[0]).merge(
+                    Span.from_ast(args.posonlyargs[-1])
+                ),
+            )
 
         if args.vararg:
             self.error(
-                "currently synr does not support varargs",
-                Span.from_ast(args.varag))
+                "currently synr does not support varargs", Span.from_ast(args.varag)
+            )
 
         if len(args.kw_defaults):
             self.error(
                 "currently synr does not support kw_defaults",
-                Span.from_ast(args.kw_defaults[0]).merge(Span.from_ast(args.kw_defaults[-1]))
+                Span.from_ast(args.kw_defaults[0]).merge(
+                    Span.from_ast(args.kw_defaults[-1])
+                ),
             )
 
         if args.kwarg:
             self.error(
-                "currently synr does not support kwarg",
-                Span.from_ast(args.kwarg)
+                "currently synr does not support kwarg", Span.from_ast(args.kwarg)
             )
 
         if args.defaults:
-            self.error("currently synr does not support defaults", Span.form_ast(args.defaults))
+            self.error(
+                "currently synr does not support defaults", Span.form_ast(args.defaults)
+            )
 
         params = []
         for arg in args.args:
@@ -128,11 +141,17 @@ class Compiler:
 
     def compile_call(self, call: py_ast.Call) -> Call:
         if len(call.keywords) > 0:
-            self.error("Keyword arguments are not allowed", Span.from_ast(call.keywords[0]).merge(Span.from_ast(call.keywords[-1])))
+            self.error(
+                "Keyword arguments are not allowed",
+                Span.from_ast(call.keywords[0]).merge(Span.from_ast(call.keywords[-1])),
+            )
 
         func = self.compile_expr(call.func)
         if func is not None and not isinstance(func, Var):
-            self.error(f"Expected function name, but got {type(func)}", Span.from_ast(call.func))
+            self.error(
+                f"Expected function name, but got {type(func)}",
+                Span.from_ast(call.func),
+            )
 
         args = []
         for arg in call.args:
@@ -146,12 +165,18 @@ class Compiler:
         for func in cls.body:
             func_span = self.span_from_ast(func)
             if not isinstance(func, py_ast.FunctionDef):
-                self.error("Only functions definitions are allowed within a class", func_span)
+                self.error(
+                    "Only functions definitions are allowed within a class", func_span
+                )
             funcs.append(self.compile_stmt(func))
         return Class(span, funcs)
 
 
-def to_ast(program: Any, diagnostic_ctx: DiagnosticContext, transformer: Optional[Transformer] = None):
+def to_ast(
+    program: Any,
+    diagnostic_ctx: DiagnosticContext,
+    transformer: Optional[Transformer] = None,
+):
     source_name = inspect.getsourcefile(program)
     assert source_name, "source name must be valid"
     lines, start_line = inspect.getsourcelines(program)

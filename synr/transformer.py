@@ -2,9 +2,10 @@ from typing import TypeVar, Generic
 
 from . import ast
 
-M = TypeVar('M')
-S = TypeVar('S')
-E = TypeVar('E')
+M = TypeVar("M")
+S = TypeVar("S")
+E = TypeVar("E")
+
 
 class Transformer(Generic[M, S, E]):
     def transform(self):
@@ -24,11 +25,14 @@ class Transformer(Generic[M, S, E]):
 class MyMod:
     pass
 
+
 class MyExpr:
     pass
 
+
 class MyStmt:
     pass
+
 
 class MyTransformer(Transformer[MyMod, MyStmt, MyExpr]):
     def transform_module(self, mod: ast.Module) -> M:
