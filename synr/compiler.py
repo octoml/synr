@@ -31,11 +31,8 @@ class Compiler:
     def span_from_ast(self, node: py_ast.AST):
         if isinstance(node, py_ast.withitem):
             span = Span.from_ast(node.context_expr)
-            # withitem span only contains the first character
-            span.end_column += len(node.context_expr.id)
             if node.optional_vars:
                 end_span = Span.from_ast(node.optional_vars)
-                end_span.end_column += len(node.optional_vars.id)
                 span = span.merge(end_span)
         else:
             span = Span.from_ast(node)

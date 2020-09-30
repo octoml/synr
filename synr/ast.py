@@ -17,7 +17,7 @@ class Span:
     def from_ast(node: py_ast.AST) -> Span:
         end_lineno = node.end_lineno if node.end_lineno is not None else node.lineno + 1
         end_col_offset = (
-            node.end_col_offset
+            node.end_col_offset + 1
             if node.end_col_offset is not None
             else node.col_offset + 2
         )
