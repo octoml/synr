@@ -3,7 +3,7 @@ from __future__ import annotations
 import ast as py_ast
 
 import attr
-from typing import Optional, Any, List, Dict
+from typing import Optional, Any, List, Dict, Union
 
 
 @attr.s(auto_attribs=True)
@@ -15,24 +15,28 @@ class Span:
 
     @staticmethod
     def from_ast(node: py_ast.AST) -> Span:
-        return Span(
-            node.lineno, node.col_offset + 1, node.end_lineno, node.end_col_offset + 1
+        end_lineno = node.end_lineno if node.end_lineno is not None else node.lineno + 1
+        end_col_offset = (
+            node.end_col_offset
+            if node.end_col_offset is not None
+            else node.col_offset + 2
         )
+        return Span(node.lineno, node.col_offset + 1, end_lineno, end_col_offset)
 
     def merge(self, span: Span) -> Span:
         self_start = (self.start_line, self.start_column)
         span_start = (span.start_line, span.start_column)
-        if self_start < span_start:
-            start_line, start_col = self_start
-        else:
-            start_line, start_col = span_start
+        start_line, start_col = min(self_start, span_start)
+
         self_end = (self.end_line, self.end_column)
         span_end = (span.end_line, span.end_column)
-        if self_end < span_end:
-            end_line, end_col = self_end
-        else:
-            end_line, end_col = span_end
+        end_line, end_col = max(self_end, span_end)
+
         return Span(start_line, start_col, end_line, end_col)
+
+    @staticmethod
+    def invalid() -> Span:
+        return Span(-1, -1, -1, -1)
 
 
 Id = str
@@ -63,7 +67,7 @@ class Expr(Node):
 
 @attr.s(auto_attribs=True)
 class Module(Node):
-    funcs: Dict[Id, Function]
+    funcs: Dict[Id, Union[Class, Function]]
 
 
 @attr.s(auto_attribs=True)
@@ -89,18 +93,37 @@ class Return(Stmt):
 
 @attr.s(auto_attribs=True)
 class Assign(Stmt):
-    lhs: Id
+    lhs: Var
     rhs: Expr
 
 
 @attr.s(auto_attribs=True)
-class Function(Stmt):
+class Function(Node):
     name: Id
     params: List[Parameter]
     ret_type: Type
-    body: Stmt
+    body: Block
+
+
+@attr.s(auto_attribs=True)
+class Block(Node):
+    stmts: List[Stmt]
+
+
+@attr.s(auto_attribs=True)
+class For(Stmt):
+    lhs: Var
+    rhs: Expr
+    body: Block
+
+
+@attr.s(auto_attribs=True)
+class With(Stmt):
+    lhs: Expr
+    rhs: Var
+    body: Block
 
 
 @attr.s(auto_attribs=True)
 class Class(Node):
-    functions: List[Function]
+    funcs: List[Function]
