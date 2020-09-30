@@ -29,7 +29,7 @@ class Compiler:
         return span
 
     def compile_module(self, program: py_ast.Module) -> Any:
-        funcs: Dict[str, Function] = {}
+        funcs: Dict[str, Union[Function, Class]] = {}
         # Merge later
         span = self.span_from_ast(program.body[0])
         for stmt in program.body:
@@ -38,6 +38,10 @@ class Compiler:
                 new_func = self.compile_stmt(stmt)
                 assert isinstance(new_func, Function)
                 funcs[stmt.name] = new_func
+            elif isinstance(stmt, py_ast.ClassDef):
+                new_class = self.compile_class(stmt)
+                assert isinstance(new_class, Class)
+                funcs[stmt.name] = new_class
             else:
                 self.error(
                     "can only transform top-level functions, other statements are invalid",
@@ -59,31 +63,31 @@ class Compiler:
         # information from arg objects.
         #
         # The below solution is temporary hack.
-        span = self.span_from_ast(args.args[0])
 
         if len(args.posonlyargs):
             self.error(
                 "currently synr only supports non-position only arguments",
-                span)
+                Span.from_ast(args.posonlyargs[0]).merge(Span.from_ast(args.posonlyargs[-1])))
 
         if args.vararg:
             self.error(
                 "currently synr does not support varargs",
-                span)
+                Span.from_ast(args.varag))
 
         if len(args.kw_defaults):
             self.error(
                 "currently synr does not support kw_defaults",
-                span
+                Span.from_ast(args.kw_defaults[0]).merge(Span.from_ast(args.kw_defaults[-1]))
             )
 
         if args.kwarg:
             self.error(
-                "currently synr does not support kwarg"
+                "currently synr does not support kwarg",
+                Span.from_ast(args.kwarg)
             )
 
         if args.defaults:
-            self.error("currently synr does not support defaults", span)
+            self.error("currently synr does not support defaults", Span.form_ast(args.defaults))
 
         params = []
         for arg in args.args:
@@ -113,8 +117,38 @@ class Compiler:
         expr_span = Span.from_ast(expr)
         if isinstance(expr, py_ast.Name):
             return Var(expr_span, expr.id)
+        elif isinstance(expr, py_ast.Constant):
+            if isinstance(expr.value, float) or isinstance(expr.value, int):
+                return Constant(expr_span, expr.value)
+            self.error("Only float and int constants are allowed", expr_span)
+        elif isinstance(expr, py_ast.Call):
+            self.compile_call(expr)
         else:
-            raise Exception(f"found {type(expr)}")
+            self.error(f"Unexpected expression {type(expr)}", expr_span)
+
+    def compile_call(self, call: py_ast.Call) -> Call:
+        if len(call.keywords) > 0:
+            self.error("Keyword arguments are not allowed", Span.from_ast(call.keywords[0]).merge(Span.from_ast(call.keywords[-1])))
+
+        func = self.compile_expr(call.func)
+        if func is not None and not isinstance(func, Var):
+            self.error(f"Expected function name, but got {type(func)}", Span.from_ast(call.func))
+
+        args = []
+        for arg in call.args:
+            args.append(self.compile_expr(arg))
+
+        return Call(Span.from_ast(call), func, args)
+
+    def compile_class(self, cls: py_ast.ClassDef) -> Class:
+        span = self.span_from_ast(cls)
+        funcs = []
+        for func in cls.body:
+            func_span = self.span_from_ast(func)
+            if not isinstance(func, py_ast.FunctionDef):
+                self.error("Only functions definitions are allowed within a class", func_span)
+            funcs.append(self.compile_stmt(func))
+        return Class(span, funcs)
 
 
 def to_ast(program: Any, diagnostic_ctx: DiagnosticContext, transformer: Optional[Transformer] = None):

@@ -29,4 +29,14 @@ def test_id_function():
     assert isinstance(return_var, synr.ast.Var)
     assert return_var.name == "x"
 
-test_id_function()
+class Class:
+    def func():
+        return func(3)
+
+def test_class():
+    module = to_ast(Class)
+    print(module)
+
+if __name__ == "__main__":
+    test_id_function()
+    test_class()
