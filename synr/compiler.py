@@ -64,11 +64,7 @@ class Compiler:
         return span
 
     def span_from_asts(self, nodes: Sequence[py_ast.AST]) -> Span:
-        assert len(nodes) > 0
-        span = self.span_from_ast(nodes[0])
-        for node in nodes[1:]:
-            span = span.merge(self.span_from_ast(node))
-        return span
+        return Span.union([self.span_from_ast(node) for node in nodes])
 
     def compile_module(self, program: py_ast.Module) -> Any:
         funcs: Dict[Name, Union[Function, Class]] = {}
@@ -107,7 +103,7 @@ class Compiler:
         #
         # The below solution is temporary hack.
 
-        if len(args.posonlyargs):
+        if hasattr(args, "posonlyargs") and len(args.posonlyargs):
             self.error(
                 "currently synr only supports non-position only arguments",
                 self.span_from_asts(args.posonlyargs),
@@ -165,18 +161,57 @@ class Compiler:
                 return Return(stmt_span, value)
             else:
                 return Return(stmt_span, None)
-        elif isinstance(stmt, py_ast.Assign):
-            if len(stmt.targets) > 1:
-                self.error("Multiple assignment is not supported", stmt_span)
-            lhs = self.compile_expr(stmt.targets[0])
-            if not isinstance(lhs, Var):
+
+        elif isinstance(stmt, py_ast.Assign) or isinstance(stmt, py_ast.AugAssign):
+            if isinstance(stmt, py_ast.Assign):
+                if len(stmt.targets) > 1:
+                    self.error("Multiple assignment is not supported", stmt_span)
+                lhs = self.compile_expr(stmt.targets[0])
+            else:
+                lhs = self.compile_expr(stmt.target)
+
+            rhs = self.compile_expr(stmt.value)
+
+            if isinstance(stmt, py_ast.AugAssign):
+                op = self.builtin_ops.get(type(stmt.op))
+                if op is None:
+                    self.error(
+                        "Unsupported op {type(op)} in assignment",
+                        lhs.span,
+                        between(rhs.span),
+                    )
+                    op = BuiltinOp.Invalid
+                rhs = Call(stmt_span, op, [lhs, rhs])
+
+            # if the lhs is a subscript, we replace the whole expression with a SubscriptAssign
+            if (
+                isinstance(lhs, Call)
+                and isinstance(lhs.name, Op)
+                and lhs.name.name == BuiltinOp.Subscript
+            ):
+                return UnassignedCall(
+                    stmt_span,
+                    Call(
+                        stmt_span,
+                        BuiltinOp.SubscriptAssign,
+                        [
+                            lhs.params[0],
+                            Tuple(
+                                Span.union([x.span for x in lhs.params[1:]]),
+                                lhs.params[1:],
+                            ),
+                            rhs,
+                        ],
+                    ),
+                )
+            elif not isinstance(lhs, Var):
                 self.error(
                     "Left hand side of assignment must be a variable",
-                    self.span_from_ast(stmt.targets[0]),
+                    lhs.span,
                 )
                 lhs = Var(Span.invalid(), Id.invalid())
-            rhs = self.compile_expr(stmt.value)
             return Assign(stmt_span, lhs, rhs)
+
         elif isinstance(stmt, py_ast.For):
             lhs = self.compile_expr(stmt.target)
             if not isinstance(lhs, Var):
@@ -188,6 +223,7 @@ class Compiler:
             rhs = self.compile_expr(stmt.iter)
             body = self.compile_block(stmt.body)
             return For(self.span_from_ast(stmt), lhs, rhs, body)
+
         elif isinstance(stmt, py_ast.With):
             if len(stmt.items) != 1:
                 self.error(
@@ -211,6 +247,7 @@ class Compiler:
             lhs = self.compile_expr(wth.context_expr)
             body = self.compile_block(stmt.body)
             return With(self.span_from_ast(stmt), lhs, rhs, body)
+
         elif isinstance(stmt, py_ast.If):
             true = self.compile_block(stmt.body)
             if len(stmt.orelse) > 0:
@@ -219,6 +256,7 @@ class Compiler:
                 false = Block(stmt_span, [])  # TODO: this span isn't correct
             condition = self.compile_expr(stmt.test)
             return If(stmt_span, condition, true, false)
+
         else:
             self.error(f"Found unexpected {type(stmt)} when compiling stmt", stmt_span)
             return Stmt(Span.invalid())
@@ -243,6 +281,11 @@ class Compiler:
             if isinstance(expr.value, float) or isinstance(expr.value, int):
                 return Constant(expr_span, expr.value)
             self.error("Only float and int constants are allowed", expr_span)
+            return Constant(expr_span, float("nan"))
+        if isinstance(expr, py_ast.Num):
+            return Constant(expr_span, expr.n)
+        if isinstance(expr, py_ast.NameConstant):
+            return Constant(expr_span, expr.value)
         if isinstance(expr, py_ast.Call):
             return self.compile_call(expr)
         if isinstance(expr, py_ast.BinOp):
@@ -328,7 +371,7 @@ class Compiler:
                 slices = [self.compile_expr(expr.slice)]
                 op_span = self.span_from_ast(expr.slice)
             slices = [self.compile_expr(expr.value)] + slices
-            return Call(expr_span, Op(op_span, BuiltinOp.SubScript), slices)
+            return Call(expr_span, Op(op_span, BuiltinOp.Subscript), slices)
         if isinstance(expr, py_ast.Index):
             return self.compile_expr(expr.value)
         if isinstance(expr, py_ast.Slice):
@@ -339,6 +382,8 @@ class Compiler:
             else:
                 step = self.compile_expr(expr.step)
             return Slice(expr_span, start, step, end)
+        if isinstance(expr, py_ast.Tuple):
+            return Tuple(expr_span, [self.compile_expr(x) for x in expr.elts])
 
         self.error(f"Unexpected expression {type(expr)}", expr_span)
         return Expr(Span.invalid())

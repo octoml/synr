@@ -4,6 +4,7 @@ import ast as py_ast
 
 import attr
 from enum import Enum, auto
+import typing
 from typing import Optional, Any, List, Dict, Union
 
 
@@ -16,10 +17,14 @@ class Span:
 
     @staticmethod
     def from_ast(node: py_ast.AST) -> Span:
-        end_lineno = node.end_lineno if node.end_lineno is not None else node.lineno + 1
+        end_lineno = (
+            node.end_lineno
+            if hasattr(node, "end_lineno") and node.end_lineno is not None
+            else node.lineno + 1
+        )
         end_col_offset = (
             node.end_col_offset + 1
-            if node.end_col_offset is not None
+            if hasattr(node, "end_col_offset") and node.end_col_offset is not None
             else node.col_offset + 2
         )
         return Span(node.lineno, node.col_offset + 1, end_lineno, end_col_offset)
@@ -34,6 +39,15 @@ class Span:
         end_line, end_col = max(self_end, span_end)
 
         return Span(start_line, start_col, end_line, end_col)
+
+    @staticmethod
+    def union(spans: Sequence[Span]) -> Span:
+        if len(spans) == 0:
+            return Self.invalid()
+        span = spans[0]
+        for s in spans[1:]:
+            span = span.merge(s)
+        return span
 
     def between(self, span: Span) -> Span:
         """The span between two spans"""
@@ -113,6 +127,11 @@ class Var(Expr):
         return Var(Span.invalid(), Id.invalid())
 
 
+@attr.s(auto_attribs=True)
+class Tuple(Expr):
+    values: typing.Tuple
+
+
 class BuiltinOp(Enum):
     Add = auto()
     Sub = auto()
@@ -120,7 +139,8 @@ class BuiltinOp(Enum):
     Div = auto()
     FloorDiv = auto()
     Mod = auto()
-    SubScript = auto()
+    Subscript = auto()
+    SubscriptAssign = auto()
     And = auto()
     Or = auto()
     Eq = auto()
@@ -164,6 +184,11 @@ class Return(Stmt):
 class Assign(Stmt):
     lhs: Var
     rhs: Expr
+
+
+@attr.s(auto_attribs=True)
+class UnassignedCall(Stmt):
+    call: Call
 
 
 @attr.s(auto_attribs=True)

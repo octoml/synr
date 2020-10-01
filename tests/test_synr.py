@@ -149,6 +149,12 @@ def func_binop():
     x = not True
     x = True and False
     x = True or False
+    x += 1
+    x -= 1
+    x /= 1
+    x *= 1
+    x //= 1
+    x %= 1
     x = (1 + 3) / (4 % 2)
 
 
@@ -188,6 +194,21 @@ def test_binop():
     verify(stmts[13].rhs, synr.ast.BuiltinOp.And, [True, False])
     verify(stmts[14].rhs, synr.ast.BuiltinOp.Or, [True, False])
 
+    def verify_assign(stmt, op, vals):
+        assert isinstance(stmt.rhs, synr.ast.Call)
+        assert stmt.rhs.name == op, f"Expect {op.name}, got {stmt.name.name}"
+        assert len(vals) + 1 == len(stmt.rhs.params)
+        assert stmt.lhs.name.full_name == stmt.rhs.params[0].name.full_name
+        for i in range(len(vals)):
+            assert stmt.rhs.params[i + 1].value == vals[i]
+
+    verify_assign(stmts[15], synr.ast.BuiltinOp.Add, [1])
+    verify_assign(stmts[16], synr.ast.BuiltinOp.Sub, [1])
+    verify_assign(stmts[17], synr.ast.BuiltinOp.Div, [1])
+    verify_assign(stmts[18], synr.ast.BuiltinOp.Mul, [1])
+    verify_assign(stmts[19], synr.ast.BuiltinOp.FloorDiv, [1])
+    verify_assign(stmts[20], synr.ast.BuiltinOp.Mod, [1])
+
 
 def func_if():
     if 1 and 2 and 3 or 4:
@@ -221,6 +242,7 @@ def test_if():
 def func_subscript():
     z = x[1:2, y]
     z = x[1.0:3.0:2]
+    x[1:2] = 3
 
 
 def test_subscript():
@@ -229,7 +251,7 @@ def test_subscript():
 
     sub = fn.body.stmts[0].rhs
     assert isinstance(sub, synr.ast.Call)
-    assert sub.name.name == synr.ast.BuiltinOp.SubScript
+    assert sub.name.name == synr.ast.BuiltinOp.Subscript
     assert sub.params[0].name.full_name == "x"
     assert sub.params[1].start.value == 1
     assert sub.params[1].step.value == 1
@@ -238,6 +260,35 @@ def test_subscript():
 
     sub2 = fn.body.stmts[1].rhs
     assert sub2.params[1].step.value == 2
+
+    sub3 = fn.body.stmts[2]
+    assert isinstance(sub3, synr.ast.UnassignedCall)
+    assert isinstance(sub3.call, synr.ast.Call)
+    assert sub3.call.name == synr.ast.BuiltinOp.SubscriptAssign
+    assert sub3.call.params[0].name.full_name == "x"
+    assert sub3.call.params[1].values[0].start.value == 1
+    assert sub3.call.params[1].values[0].end.value == 2
+    assert sub3.call.params[2].value == 3
+
+
+def func_literals():
+    x = 1
+    x = 2.
+    x = (1, 2.)
+
+def test_literals():
+    module = to_ast(func_literals)
+    fn = assert_one_fn(module, "func_literals", no_params=0)
+
+    assert fn.body.stmts[0].rhs.value == 1
+    assert isinstance(fn.body.stmts[0].rhs.value, int)
+
+    assert fn.body.stmts[1].rhs.value == 2.
+    assert isinstance(fn.body.stmts[1].rhs.value, float)
+
+    assert fn.body.stmts[2].rhs.values[0].value == 1
+    assert fn.body.stmts[2].rhs.values[1].value == 2.
+    assert isinstance(fn.body.stmts[2].rhs, synr.ast.Tuple)
 
 
 if __name__ == "__main__":
@@ -251,3 +302,4 @@ if __name__ == "__main__":
     test_binop()
     test_if()
     test_subscript()
+    test_literals()
