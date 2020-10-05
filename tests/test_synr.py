@@ -1,3 +1,4 @@
+from __future__ import annotations
 import tvm
 import synr
 from synr import __version__
@@ -196,7 +197,7 @@ def test_binop():
 
     def verify_assign(stmt, op, vals):
         assert isinstance(stmt.rhs, synr.ast.Call)
-        assert stmt.rhs.name == op, f"Expect {op.name}, got {stmt.name.name}"
+        assert stmt.rhs.name.name == op, f"Expect {op.name}, got {stmt.name.name}"
         assert len(vals) + 1 == len(stmt.rhs.params)
         assert stmt.lhs.name.full_name == stmt.rhs.params[0].name.full_name
         for i in range(len(vals)):
@@ -243,6 +244,7 @@ def func_subscript():
     z = x[1:2, y]
     z = x[1.0:3.0:2]
     x[1:2] = 3
+    z = x[y, z]
 
 
 def test_subscript():
@@ -253,28 +255,35 @@ def test_subscript():
     assert isinstance(sub, synr.ast.Call)
     assert sub.name.name == synr.ast.BuiltinOp.Subscript
     assert sub.params[0].name.full_name == "x"
-    assert sub.params[1].start.value == 1
-    assert sub.params[1].step.value == 1
-    assert sub.params[1].end.value == 2
-    assert sub.params[2].name.full_name == "y"
+    assert sub.params[1].values[0].start.value == 1
+    assert sub.params[1].values[0].step.value == 1
+    assert sub.params[1].values[0].end.value == 2
+    assert sub.params[1].values[1].name.full_name == "y"
 
     sub2 = fn.body.stmts[1].rhs
-    assert sub2.params[1].step.value == 2
+    assert sub2.params[1].values[0].step.value == 2
 
     sub3 = fn.body.stmts[2]
     assert isinstance(sub3, synr.ast.UnassignedCall)
     assert isinstance(sub3.call, synr.ast.Call)
-    assert sub3.call.name == synr.ast.BuiltinOp.SubscriptAssign
+    assert sub3.call.name.name == synr.ast.BuiltinOp.SubscriptAssign
     assert sub3.call.params[0].name.full_name == "x"
+    assert isinstance(sub3.call.params[1], synr.ast.Tuple)
+    assert isinstance(sub3.call.params[1].values[0], synr.ast.Slice)
     assert sub3.call.params[1].values[0].start.value == 1
     assert sub3.call.params[1].values[0].end.value == 2
     assert sub3.call.params[2].value == 3
 
+    sub4 = fn.body.stmts[3].rhs
+    assert sub4.params[1].values[0].name.full_name == "y"
+    assert sub4.params[1].values[1].name.full_name == "z"
+
 
 def func_literals():
     x = 1
-    x = 2.
-    x = (1, 2.)
+    x = 2.0
+    x = (1, 2.0)
+
 
 def test_literals():
     module = to_ast(func_literals)
@@ -283,12 +292,41 @@ def test_literals():
     assert fn.body.stmts[0].rhs.value == 1
     assert isinstance(fn.body.stmts[0].rhs.value, int)
 
-    assert fn.body.stmts[1].rhs.value == 2.
+    assert fn.body.stmts[1].rhs.value == 2.0
     assert isinstance(fn.body.stmts[1].rhs.value, float)
 
     assert fn.body.stmts[2].rhs.values[0].value == 1
-    assert fn.body.stmts[2].rhs.values[1].value == 2.
+    assert fn.body.stmts[2].rhs.values[1].value == 2.0
     assert isinstance(fn.body.stmts[2].rhs, synr.ast.Tuple)
+
+
+def func_type(x: X) -> Y:
+    x: test.X = 1
+    x: X[Y] = 1
+    x: X[X, Y] = 1
+    x: X[X:Y] = 1
+    x: X[1] = 1
+
+
+def test_type():
+    module = to_ast(func_type)
+    fn = assert_one_fn(module, "func_type", no_params=0)
+
+    assert isinstance(fn.ret_type, synr.ast.TypeVar)
+    assert isinstance(fn.params[0].ty, synr.ast.TypeVar), fn.params[0].ty
+    assert fn.params[0].ty.name.full_name == "X"
+
+    stmts = fn.body.stmts
+    assert stmts[0].ty.name.full_name == "test.X"
+
+    assert isinstance(stmts[1].ty, synr.ast.TypeApply)
+    assert stmts[1].ty.name.name.full_name == "X"
+    assert stmts[1].ty.params[0].name.full_name == "Y"
+
+    assert isinstance(stmts[2].ty, synr.ast.TypeApply)
+    assert stmts[2].ty.name.name.full_name == "X"
+    assert stmts[2].ty.params[0].name.full_name == "X"
+    assert stmts[2].ty.params[1].name.full_name == "Y"
 
 
 if __name__ == "__main__":
@@ -303,3 +341,4 @@ if __name__ == "__main__":
     test_if()
     test_subscript()
     test_literals()
+    test_type()

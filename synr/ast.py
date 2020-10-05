@@ -5,7 +5,7 @@ import ast as py_ast
 import attr
 from enum import Enum, auto
 import typing
-from typing import Optional, Any, List, Dict, Union
+from typing import Optional, Any, List, Dict, Union, Sequence
 
 
 @attr.s(auto_attribs=True)
@@ -43,7 +43,7 @@ class Span:
     @staticmethod
     def union(spans: Sequence[Span]) -> Span:
         if len(spans) == 0:
-            return Self.invalid()
+            return Span.invalid()
         span = spans[0]
         for s in spans[1:]:
             span = span.merge(s)
@@ -128,8 +128,42 @@ class Var(Expr):
 
 
 @attr.s(auto_attribs=True)
+class TypeVar(Type):
+    name: Id
+
+
+@attr.s(auto_attribs=True)
+class TypeCall(Type):
+    name: Union[Id, BuiltinOp]
+    params: List[Type]
+
+
+@attr.s(auto_attribs=True)
+class TypeApply(Type):
+    name: Id
+    params: List[Type]
+
+
+@attr.s(auto_attribs=True)
+class TypeTuple(Type):
+    values: typing.Tuple[Type, ...]
+
+
+@attr.s(auto_attribs=True)
+class TypeConstant(Type):
+    value: Union[float, int]
+
+
+@attr.s(auto_attribs=True)
+class TypeSlice(Type):
+    start: Type
+    step: Type
+    end: Type
+
+
+@attr.s(auto_attribs=True)
 class Tuple(Expr):
-    values: typing.Tuple
+    values: typing.Tuple[Expr, ...]
 
 
 class BuiltinOp(Enum):
@@ -159,7 +193,7 @@ class Op(Node):
 
 @attr.s(auto_attribs=True)
 class Constant(Expr):
-    value: Union[float, int]
+    value: Union[float, int, complex]
 
 
 @attr.s(auto_attribs=True)
@@ -183,6 +217,7 @@ class Return(Stmt):
 @attr.s(auto_attribs=True)
 class Assign(Stmt):
     lhs: Var
+    ty: Optional[Type]
     rhs: Expr
 
 
@@ -195,7 +230,7 @@ class UnassignedCall(Stmt):
 class Function(Node):
     name: Name
     params: List[Parameter]
-    ret_type: Type
+    ret_type: Optional[Type]
     body: Block
 
 

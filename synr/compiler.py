@@ -52,9 +52,14 @@ class Compiler:
                 end_span = Span.from_ast(node.optional_vars)
                 span = span.merge(end_span)
         elif isinstance(node, py_ast.Slice):
-            left = Span.from_ast(node.lower)
-            right = Span.from_ast(node.upper)
-            span = left.merge(right)
+            spans = []
+            if node.lower is not None:
+                spans.append(Span.from_ast(node.lower))
+            if node.upper is not None:
+                spans.append(Span.from_ast(node.upper))
+            if node.step is not None:
+                spans.append(Span.from_ast(node.step))
+            span = Span.union(spans)
         elif isinstance(node, py_ast.Index):
             span = Span.from_ast(node.value)
         else:
@@ -135,7 +140,10 @@ class Compiler:
         params = []
         for arg in args.args:
             span = self.span_from_ast(arg)
-            params.append(Parameter(span, arg.arg, None))
+            ty: Optional[Type] = None
+            if arg.annotation is not None:
+                ty = self.compile_type(arg.annotation)
+            params.append(Parameter(span, arg.arg, ty))
 
         return params
 
@@ -146,7 +154,10 @@ class Compiler:
             args = stmt.args
             params = self.compile_args_to_params(args)
             body = self.compile_block(stmt.body)
-            return Function(stmt_span, name, params, Type(Span.invalid()), body)
+            ty: Optional[Type] = None
+            if stmt.returns is not None:
+                ty = self.compile_type(stmt.returns)
+            return Function(stmt_span, name, params, ty, body)
         else:
             self.error(f"found {type(stmt)}", stmt_span)
             return Function(
@@ -162,7 +173,11 @@ class Compiler:
             else:
                 return Return(stmt_span, None)
 
-        elif isinstance(stmt, py_ast.Assign) or isinstance(stmt, py_ast.AugAssign):
+        elif (
+            isinstance(stmt, py_ast.Assign)
+            or isinstance(stmt, py_ast.AugAssign)
+            or isinstance(stmt, py_ast.AnnAssign)
+        ):
             if isinstance(stmt, py_ast.Assign):
                 if len(stmt.targets) > 1:
                     self.error("Multiple assignment is not supported", stmt_span)
@@ -170,18 +185,22 @@ class Compiler:
             else:
                 lhs = self.compile_expr(stmt.target)
 
-            rhs = self.compile_expr(stmt.value)
+            if stmt.value is None:
+                self.error("Empty type assignment not supported", stmt_span)
+                rhs = Expr(stmt_span)
+            else:
+                rhs = self.compile_expr(stmt.value)
 
             if isinstance(stmt, py_ast.AugAssign):
                 op = self.builtin_ops.get(type(stmt.op))
+                op_span = lhs.span.between(rhs.span)
                 if op is None:
                     self.error(
                         "Unsupported op {type(op)} in assignment",
-                        lhs.span,
-                        between(rhs.span),
+                        op_span,
                     )
                     op = BuiltinOp.Invalid
-                rhs = Call(stmt_span, op, [lhs, rhs])
+                rhs = Call(stmt_span, Op(op_span, op), [lhs, rhs])
 
             # if the lhs is a subscript, we replace the whole expression with a SubscriptAssign
             if (
@@ -193,12 +212,12 @@ class Compiler:
                     stmt_span,
                     Call(
                         stmt_span,
-                        BuiltinOp.SubscriptAssign,
+                        Op(lhs.name.span, BuiltinOp.SubscriptAssign),
                         [
                             lhs.params[0],
                             Tuple(
-                                Span.union([x.span for x in lhs.params[1:]]),
-                                lhs.params[1:],
+                                Span.union([x.span for x in lhs.params[1].values]), # type: ignore
+                                lhs.params[1].values, # type: ignore
                             ),
                             rhs,
                         ],
@@ -210,7 +229,10 @@ class Compiler:
                     lhs.span,
                 )
                 lhs = Var(Span.invalid(), Id.invalid())
-            return Assign(stmt_span, lhs, rhs)
+            ty: Optional[Type] = None
+            if isinstance(stmt, py_ast.AnnAssign):
+                ty = self.compile_type(stmt.annotation)
+            return Assign(stmt_span, lhs, ty, rhs)
 
         elif isinstance(stmt, py_ast.For):
             lhs = self.compile_expr(stmt.target)
@@ -314,18 +336,18 @@ class Compiler:
                 )
             rhs = self.compile_expr(expr.comparators[0])
             op_span = lhs.span.between(rhs.span)
-            ty = type(expr.ops[0])
+            ty2 = type(expr.ops[0])
             # Desugar `a != b` to `not (a == b)`
-            if ty == py_ast.NotEq:
+            if ty2 == py_ast.NotEq:
                 return Call(
                     expr_span,
                     Op(op_span, BuiltinOp.Not),
                     [Call(expr_span, Op(op_span, BuiltinOp.Eq), [lhs, rhs])],
                 )
-            op = self.builtin_ops.get(ty)
+            op = self.builtin_ops.get(ty2)
             if op is None:
                 self.error(
-                    f"Comparison operator {ty} is not supported",
+                    f"Comparison operator {ty2} is not supported",
                     op_span,
                 )
                 op = BuiltinOp.Invalid
@@ -333,11 +355,11 @@ class Compiler:
         if isinstance(expr, py_ast.UnaryOp):
             lhs = self.compile_expr(expr.operand)
             op_span = expr_span.subtract(lhs.span)
-            ty = type(expr.op)
-            op = self.builtin_ops.get(ty)
+            ty3 = type(expr.op)
+            op = self.builtin_ops.get(ty3)
             if op is None:
                 self.error(
-                    f"Unary operator {ty} is not supported",
+                    f"Unary operator {ty3} is not supported",
                     op_span,
                 )
                 op = BuiltinOp.Invalid
@@ -346,11 +368,11 @@ class Compiler:
             lhs = self.compile_expr(expr.values[0])
             rhs = self.compile_expr(expr.values[1])
             op_span = lhs.span.between(rhs.span)
-            ty = type(expr.op)
-            op = self.builtin_ops.get(ty)
+            ty4 = type(expr.op)
+            op = self.builtin_ops.get(ty4)
             if op is None:
                 self.error(
-                    f"Binary operator {ty} is not supported",
+                    f"Binary operator {ty4} is not supported",
                     op_span,
                 )
                 op = BuiltinOp.Invalid
@@ -364,29 +386,37 @@ class Compiler:
                 )
             return call
         if isinstance(expr, py_ast.Subscript):
-            if isinstance(expr.slice, py_ast.ExtSlice):
-                slices = [self.compile_expr(d) for d in expr.slice.dims]
-                op_span = self.span_from_asts(expr.slice.dims)
-            else:
-                slices = [self.compile_expr(expr.slice)]
-                op_span = self.span_from_ast(expr.slice)
-            slices = [self.compile_expr(expr.value)] + slices
-            return Call(expr_span, Op(op_span, BuiltinOp.Subscript), slices)
-        if isinstance(expr, py_ast.Index):
-            return self.compile_expr(expr.value)
-        if isinstance(expr, py_ast.Slice):
-            start = self.compile_expr(expr.lower)
-            end = self.compile_expr(expr.upper)
-            if expr.step is None:
-                step = Constant(start.span.between(end.span), 1)
-            else:
-                step = self.compile_expr(expr.step)
-            return Slice(expr_span, start, step, end)
+            lhs = self.compile_expr(expr.value)
+            rhs = self.compile_slice(expr.slice)
+            return Call(expr_span, Op(rhs.span, BuiltinOp.Subscript), [lhs, rhs])
         if isinstance(expr, py_ast.Tuple):
             return Tuple(expr_span, [self.compile_expr(x) for x in expr.elts])
 
         self.error(f"Unexpected expression {type(expr)}", expr_span)
         return Expr(Span.invalid())
+
+    def _compile_slice(self, slice: py_ast.slice) -> Expr:
+        if isinstance(slice, py_ast.Slice):
+            start = self.compile_expr(slice.lower)
+            end = self.compile_expr(slice.upper)
+            if slice.step is None:
+                step = Constant(start.span.between(end.span), 1)
+            else:
+                step = self.compile_expr(slice.step)
+            span = self.span_from_ast(slice)
+            return Slice(span, start, step, end)
+        # x[1:2, z] is an ExtSlice in the python ast
+        if isinstance(slice, py_ast.ExtSlice):
+            slices = [self._compile_slice(d) for d in slice.dims]
+            return Tuple(Span.union([s.span for s in slices]), slices)
+        return self.compile_expr(slice.value)
+
+    def compile_slice(self, slice: py_ast.slice) -> Tuple:
+        # We ensure that slices are always a tuple
+        s = self._compile_slice(slice)
+        if isinstance(s, Tuple):
+            return s
+        return Tuple(s.span, [s])
 
     def compile_call(self, call: py_ast.Call) -> Call:
         if len(call.keywords) > 0:
@@ -407,6 +437,24 @@ class Compiler:
             args.append(self.compile_expr(arg))
 
         return Call(self.span_from_ast(call), func, args)
+
+    def _expr2type(self, expr: Expr) -> Type:
+        if isinstance(expr, Var):
+            return TypeVar(expr.span, expr.name)
+        if isinstance(expr, Constant):
+            return TypeConstant(expr.span, expr.value)
+        if isinstance(expr, Tuple):
+            return TypeTuple(expr.span, expr.values)
+        if isinstance(expr, Slice):
+            return TypeSlice(expr.span, expr.start, expr.step, expr.end)
+        if isinstance(expr, Call):
+            if expr.name.name == BuiltinOp.Subscript:
+                return TypeApply(expr.span, expr.params[0], expr.params[1].values)
+        self.error(f"Found unknown kind (type of type) {type(expr)}", expr.span)
+        return Type(Span.invalid())
+
+    def compile_type(self, ty: py_ast.expr) -> Type:
+        return self._expr2type(self.compile_expr(ty))
 
     def compile_class(self, cls: py_ast.ClassDef) -> Class:
         span = self.span_from_ast(cls)
