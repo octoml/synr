@@ -372,7 +372,7 @@ def test_err_msg():
     errs = to_ast_err(func_err)
     def_errs = sorted([(x[1], x[2]) for x in errs[1]], key=lambda x: x[1].start_column)
 
-    def check_err(err, msg, filename, start_line, start_column, end_line, end_column):
+    def check_err(err, msg, filename, start_line, start_column):
         assert (
             err[0] == msg
         ), f"Error message `{err[0]}` does not match expected message `{msg}`"
@@ -386,12 +386,6 @@ def test_err_msg():
         assert (
             span.start_column == start_column
         ), f"Starting column of error does not match expected: {span.start_column} vs {start_column}"
-        assert (
-            span.end_line == end_line
-        ), f"Ending line of error does not match expected: {span.end_line} vs {end_line}"
-        assert (
-            span.end_column == end_column
-        ), f"Ending column of error does not match expected: {span.end_column} vs {end_column}"
 
     check_err(
         def_errs[0],
@@ -399,8 +393,6 @@ def test_err_msg():
         "test_synr.py",
         1,
         16,
-        1,
-        17,
     )
     check_err(
         def_errs[1],
@@ -408,8 +400,6 @@ def test_err_msg():
         "test_synr.py",
         1,
         20,
-        1,
-        24,
     )
     check_err(
         def_errs[2],
@@ -417,8 +407,6 @@ def test_err_msg():
         "test_synr.py",
         1,
         28,
-        1,
-        34,
     )
 
     assert errs[2][0][1] == "Left hand side of assignment must be a variable"

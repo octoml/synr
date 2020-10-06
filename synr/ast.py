@@ -19,7 +19,7 @@ class Span:
         if hasattr(node, "end_lineno") and node.end_lineno is not None:  # type: ignore
             end_lineno = node.end_lineno  # type: ignore
         else:
-            end_lineno = node.lineno + 1
+            end_lineno = node.lineno
         if hasattr(node, "end_col_offset") and node.end_col_offset is not None:  # type: ignore
             end_col_offset = node.end_col_offset + 1  # type: ignore
         else:
