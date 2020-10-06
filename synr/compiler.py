@@ -109,10 +109,10 @@ class Compiler:
         #
         # The below solution is temporary hack.
 
-        if hasattr(args, "posonlyargs") and len(args.posonlyargs): # type: ignore
+        if hasattr(args, "posonlyargs") and len(args.posonlyargs):  # type: ignore
             self.error(
                 "currently synr only supports non-position only arguments",
-                self.span_from_asts(args.posonlyargs), # type: ignore
+                self.span_from_asts(args.posonlyargs),  # type: ignore
             )
 
         if args.vararg:
