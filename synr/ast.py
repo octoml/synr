@@ -16,16 +16,14 @@ class Span:
 
     @staticmethod
     def from_ast(filename: str, node: py_ast.AST) -> "Span":
-        end_lineno = (
-            node.end_lineno
-            if hasattr(node, "end_lineno") and node.end_lineno is not None
-            else node.lineno + 1
-        )
-        end_col_offset = (
-            node.end_col_offset + 1
-            if hasattr(node, "end_col_offset") and node.end_col_offset is not None
-            else node.col_offset + 2
-        )
+        if hasattr(node, "end_lineno") and node.end_lineno is not None: # type: ignore
+            end_lineno = node.end_lineno # type: ignore
+        else:
+            end_lineno =  node.lineno + 1
+        if hasattr(node, "end_col_offset") and node.end_col_offset is not None: # type: ignore
+            end_col_offset = node.end_col_offset + 1 # type: ignore
+        else:
+            end_col_offset = node.col_offset + 2
         return Span(
             filename, node.lineno, node.col_offset + 1, end_lineno, end_col_offset
         )
