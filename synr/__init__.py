@@ -7,4 +7,4 @@ embedded domain specific langauges.
 __version__ = "0.1.0"
 
 from .compiler import to_ast
-from .tvm_diagnostic import TVMDiagnosticCtx
+from .diagnostic_context import PrinterDiagnosticContext, DiagnosticContext

@@ -1,5 +1,4 @@
 from __future__ import annotations
-import tvm
 import synr
 from synr import __version__
 from typing import Any
@@ -10,9 +9,12 @@ def test_version():
 
 
 def to_ast(program: Any) -> Any:
-    diag_ctx = synr.tvm_diagnostic.TVMDiagnosticCtx(tvm.IRModule({}))
+    diag_ctx = synr.PrinterDiagnosticContext()
     transformer = None
-    return synr.to_ast(program, diag_ctx, transformer)
+    res = synr.to_ast(program, diag_ctx, transformer)
+    if isinstance(res, str):
+        raise (RuntimeError(res))
+    return res
 
 
 def assert_one_fn(module, name, no_params=None):
@@ -245,6 +247,7 @@ def func_subscript():
     z = x[1.0:3.0:2]
     x[1:2] = 3
     z = x[y, z]
+    return x[:1]
 
 
 def test_subscript():
@@ -320,11 +323,11 @@ def test_type():
     assert stmts[0].ty.name.full_name == "test.X"
 
     assert isinstance(stmts[1].ty, synr.ast.TypeApply)
-    assert stmts[1].ty.name.name.full_name == "X"
+    assert stmts[1].ty.name.full_name == "X"
     assert stmts[1].ty.params[0].name.full_name == "Y"
 
     assert isinstance(stmts[2].ty, synr.ast.TypeApply)
-    assert stmts[2].ty.name.name.full_name == "X"
+    assert stmts[2].ty.name.full_name == "X"
     assert stmts[2].ty.params[0].name.full_name == "X"
     assert stmts[2].ty.params[1].name.full_name == "Y"
 

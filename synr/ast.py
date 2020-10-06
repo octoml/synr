@@ -10,13 +10,14 @@ from typing import Optional, Any, List, Dict, Union, Sequence
 
 @attr.s(auto_attribs=True)
 class Span:
+    filename: str
     start_line: int
     start_column: int
     end_line: int
     end_column: int
 
     @staticmethod
-    def from_ast(node: py_ast.AST) -> Span:
+    def from_ast(filename: str, node: py_ast.AST) -> Span:
         end_lineno = (
             node.end_lineno
             if hasattr(node, "end_lineno") and node.end_lineno is not None
@@ -27,9 +28,12 @@ class Span:
             if hasattr(node, "end_col_offset") and node.end_col_offset is not None
             else node.col_offset + 2
         )
-        return Span(node.lineno, node.col_offset + 1, end_lineno, end_col_offset)
+        return Span(
+            filename, node.lineno, node.col_offset + 1, end_lineno, end_col_offset
+        )
 
     def merge(self, span: Span) -> Span:
+        assert self.filename == span.filename, "Spans must be from the same file"
         self_start = (self.start_line, self.start_column)
         span_start = (span.start_line, span.start_column)
         start_line, start_col = min(self_start, span_start)
@@ -38,7 +42,7 @@ class Span:
         span_end = (span.end_line, span.end_column)
         end_line, end_col = max(self_end, span_end)
 
-        return Span(start_line, start_col, end_line, end_col)
+        return Span(self.filename, start_line, start_col, end_line, end_col)
 
     @staticmethod
     def union(spans: Sequence[Span]) -> Span:
@@ -51,16 +55,28 @@ class Span:
 
     def between(self, span: Span) -> Span:
         """The span between two spans"""
-        return Span(self.end_line, self.end_column, span.start_line, span.start_column)
+        assert self.filename == span.filename, "Spans must be from the same file"
+        return Span(
+            self.filename,
+            self.end_line,
+            self.end_column,
+            span.start_line,
+            span.start_column,
+        )
 
     def subtract(self, span: Span) -> Span:
+        assert self.filename == span.filename, "Spans must be from the same file"
         return Span(
-            self.start_line, self.start_column, span.start_line, span.start_column
+            self.filename,
+            self.start_line,
+            self.start_column,
+            span.start_line,
+            span.start_column,
         )
 
     @staticmethod
     def invalid() -> Span:
-        return Span(-1, -1, -1, -1)
+        return Span("", -1, -1, -1, -1)
 
 
 @attr.s(auto_attribs=True)
@@ -141,17 +157,17 @@ class TypeCall(Type):
 @attr.s(auto_attribs=True)
 class TypeApply(Type):
     name: Id
-    params: List[Type]
+    params: Sequence[Type]
 
 
 @attr.s(auto_attribs=True)
 class TypeTuple(Type):
-    values: typing.Tuple[Type, ...]
+    values: Sequence[Expr]
 
 
 @attr.s(auto_attribs=True)
 class TypeConstant(Type):
-    value: Union[float, int]
+    value: Union[complex, float, int]
 
 
 @attr.s(auto_attribs=True)
@@ -163,7 +179,7 @@ class TypeSlice(Type):
 
 @attr.s(auto_attribs=True)
 class Tuple(Expr):
-    values: typing.Tuple[Expr, ...]
+    values: Sequence[Expr]
 
 
 class BuiltinOp(Enum):

@@ -11,6 +11,7 @@ from .transformer import Transformer
 
 
 class Compiler:
+    filename: str
     start_line: int
     transformer: Optional[Transformer]
     diagnostic_ctx: DiagnosticContext
@@ -34,10 +35,12 @@ class Compiler:
 
     def __init__(
         self,
+        filename: str,
         start_line: int,
         transformer: Optional[Transformer],
         diagnostic_ctx: DiagnosticContext,
     ):
+        self.filename = filename
         self.start_line = 0  # FIXME: start_line
         self.transformer = transformer
         self.diagnostic_ctx = diagnostic_ctx
@@ -47,23 +50,23 @@ class Compiler:
 
     def span_from_ast(self, node: py_ast.AST) -> Span:
         if isinstance(node, py_ast.withitem):
-            span = Span.from_ast(node.context_expr)
+            span = Span.from_ast(self.filename, node.context_expr)
             if node.optional_vars:
-                end_span = Span.from_ast(node.optional_vars)
+                end_span = Span.from_ast(self.filename, node.optional_vars)
                 span = span.merge(end_span)
         elif isinstance(node, py_ast.Slice):
             spans = []
             if node.lower is not None:
-                spans.append(Span.from_ast(node.lower))
+                spans.append(Span.from_ast(self.filename, node.lower))
             if node.upper is not None:
-                spans.append(Span.from_ast(node.upper))
+                spans.append(Span.from_ast(self.filename, node.upper))
             if node.step is not None:
-                spans.append(Span.from_ast(node.step))
+                spans.append(Span.from_ast(self.filename, node.step))
             span = Span.union(spans)
         elif isinstance(node, py_ast.Index):
-            span = Span.from_ast(node.value)
+            span = Span.from_ast(self.filename, node.value)
         else:
-            span = Span.from_ast(node)
+            span = Span.from_ast(self.filename, node)
         span.start_line += self.start_line
         span.end_line += self.start_line
         return span
@@ -216,8 +219,8 @@ class Compiler:
                         [
                             lhs.params[0],
                             Tuple(
-                                Span.union([x.span for x in lhs.params[1].values]), # type: ignore
-                                lhs.params[1].values, # type: ignore
+                                Span.union([x.span for x in lhs.params[1].values]),  # type: ignore
+                                lhs.params[1].values,  # type: ignore
                             ),
                             rhs,
                         ],
@@ -397,10 +400,17 @@ class Compiler:
 
     def _compile_slice(self, slice: py_ast.slice) -> Expr:
         if isinstance(slice, py_ast.Slice):
-            start = self.compile_expr(slice.lower)
-            end = self.compile_expr(slice.upper)
+            # TODO: handle spans for slice without start and end
+            if slice.lower is None:
+                start: Expr = Constant(Span.invalid(), 0)
+            else:
+                start = self.compile_expr(slice.lower)
+            if slice.upper is None:
+                end: Expr = Constant(Span.invalid(), -1)
+            else:
+                end = self.compile_expr(slice.upper)
             if slice.step is None:
-                step = Constant(start.span.between(end.span), 1)
+                step: Expr = Constant(Span.invalid(), 1)
             else:
                 step = self.compile_expr(slice.step)
             span = self.span_from_ast(slice)
@@ -409,7 +419,10 @@ class Compiler:
         if isinstance(slice, py_ast.ExtSlice):
             slices = [self._compile_slice(d) for d in slice.dims]
             return Tuple(Span.union([s.span for s in slices]), slices)
-        return self.compile_expr(slice.value)
+        if isinstance(slice, py_ast.Index):
+            return self.compile_expr(slice.value)
+        self.error(f"Unexpected slice type {type(slice)}", self.span_from_ast(slice))
+        return Expr(Span.invalid())
 
     def compile_slice(self, slice: py_ast.slice) -> Tuple:
         # We ensure that slices are always a tuple
@@ -446,10 +459,25 @@ class Compiler:
         if isinstance(expr, Tuple):
             return TypeTuple(expr.span, expr.values)
         if isinstance(expr, Slice):
-            return TypeSlice(expr.span, expr.start, expr.step, expr.end)
+            return TypeSlice(
+                expr.span,
+                self._expr2type(expr.start),
+                self._expr2type(expr.step),
+                self._expr2type(expr.end),
+            )
         if isinstance(expr, Call):
             if expr.name.name == BuiltinOp.Subscript:
-                return TypeApply(expr.span, expr.params[0], expr.params[1].values)
+                assert isinstance(
+                    expr.params[0], Var
+                ), f"Expected subscript call to have lhs of Var, but it is {type(expr.params[0])}"
+                assert isinstance(
+                    expr.params[1], Tuple
+                ), f"Expected subscript call to have rhs of Tuple, but it is {type(expr.params[1])}"
+                return TypeApply(
+                    expr.span,
+                    expr.params[0].name,
+                    [self._expr2type(x) for x in expr.params[1].values],
+                )
         self.error(f"Found unknown kind (type of type) {type(expr)}", expr.span)
         return Type(Span.invalid())
 
@@ -474,15 +502,17 @@ def to_ast(
     program: Any,
     diagnostic_ctx: DiagnosticContext,
     transformer: Optional[Transformer] = None,
-):
+) -> Any:
     source_name = inspect.getsourcefile(program)
     assert source_name, "source name must be valid"
     lines, start_line = inspect.getsourcelines(program)
     source = "".join(lines)
     diagnostic_ctx.add_source(source_name, source)
     program_ast = py_ast.parse(source)
-    compiler = Compiler(start_line, transformer, diagnostic_ctx)
+    compiler = Compiler(source_name, start_line, transformer, diagnostic_ctx)
     assert isinstance(program_ast, py_ast.Module), "support module"
     prog = compiler.compile_module(program_ast)
-    diagnostic_ctx.diag_ctx.render()
+    err = diagnostic_ctx.render()
+    if err is not None:
+        return err
     return prog
