@@ -5,7 +5,7 @@ description = ""
 authors = ["Jared Roesch <jroesch@octoml.ai>"]
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.6"
 attrs = "*"
 
 [tool.poetry.dev-dependencies]
