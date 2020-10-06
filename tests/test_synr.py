@@ -339,6 +339,74 @@ def test_type():
     assert stmts[2].ty.params[1].name.full_name == "Y"
 
 
+class ErrorAccumulator:
+    def __init__(self):
+        self.errors = {}
+        self.sources = {}
+
+    def add_source(self, name, source):
+        self.sources[name] = source
+
+    def emit(self, level, message, span):
+        if span.start_line in self.errors:
+            self.errors[span.start_line].append((level, message, span))
+        else:
+            self.errors[span.start_line] = [(level, message, span)]
+
+    def render(self):
+        return self.errors
+
+
+def to_ast_err(program: Any) -> Any:
+    diag_ctx = ErrorAccumulator()
+    transformer = None
+    return synr.to_ast(program, diag_ctx, transformer)
+
+
+def func_err(x=2, *args, **kwargs):
+    x, y = 2
+    x: X
+
+
+def test_err_msg():
+    errs = to_ast_err(func_err)
+    def_errs = sorted([(x[1], x[2]) for x in errs[1]], key=lambda x: x[1].start_column)
+    assert def_errs == [
+        (
+            "currently synr does not support defaults",
+            synr.ast.Span(
+                filename="tests/test_synr.py",
+                start_line=1,
+                start_column=16,
+                end_line=1,
+                end_column=17,
+            ),
+        ),
+        (
+            "currently synr does not support varargs",
+            synr.ast.Span(
+                filename="tests/test_synr.py",
+                start_line=1,
+                start_column=20,
+                end_line=1,
+                end_column=24,
+            ),
+        ),
+        (
+            "currently synr does not support kwarg",
+            synr.ast.Span(
+                filename="tests/test_synr.py",
+                start_line=1,
+                start_column=28,
+                end_line=1,
+                end_column=34,
+            ),
+        ),
+    ]
+    assert errs[2][0][1] == "Left hand side of assignment must be a variable"
+    assert errs[3][0][1] == "Empty type assignment not supported"
+
+
 if __name__ == "__main__":
     test_id_function()
     test_class()
@@ -352,3 +420,4 @@ if __name__ == "__main__":
     test_subscript()
     test_literals()
     test_type()
+    test_err_msg()

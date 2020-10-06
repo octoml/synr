@@ -16,8 +16,8 @@ class DiagnosticContext:
 
 @attr.s(auto_attribs=True)
 class PrinterDiagnosticContext:
-    sources: Dict[str, Sequence[str]] = {}
-    errors: List[Tuple[str, str, Span]] = []
+    sources: Dict[str, Sequence[str]] = attr.ib(default=attr.Factory(dict))
+    errors: List[Tuple[str, str, Span]] = attr.ib(default=attr.Factory(list))
 
     def add_source(self, name: str, source: str) -> None:
         self.sources[name] = source.split("\n")
