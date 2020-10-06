@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import ast as py_ast
 
 import attr
@@ -17,7 +15,7 @@ class Span:
     end_column: int
 
     @staticmethod
-    def from_ast(filename: str, node: py_ast.AST) -> Span:
+    def from_ast(filename: str, node: py_ast.AST) -> "Span":
         end_lineno = (
             node.end_lineno
             if hasattr(node, "end_lineno") and node.end_lineno is not None
@@ -32,7 +30,7 @@ class Span:
             filename, node.lineno, node.col_offset + 1, end_lineno, end_col_offset
         )
 
-    def merge(self, span: Span) -> Span:
+    def merge(self, span: "Span") -> "Span":
         assert self.filename == span.filename, "Spans must be from the same file"
         self_start = (self.start_line, self.start_column)
         span_start = (span.start_line, span.start_column)
@@ -45,7 +43,7 @@ class Span:
         return Span(self.filename, start_line, start_col, end_line, end_col)
 
     @staticmethod
-    def union(spans: Sequence[Span]) -> Span:
+    def union(spans: Sequence["Span"]) -> "Span":
         if len(spans) == 0:
             return Span.invalid()
         span = spans[0]
@@ -53,7 +51,7 @@ class Span:
             span = span.merge(s)
         return span
 
-    def between(self, span: Span) -> Span:
+    def between(self, span: "Span") -> "Span":
         """The span between two spans"""
         assert self.filename == span.filename, "Spans must be from the same file"
         return Span(
@@ -64,7 +62,7 @@ class Span:
             span.start_column,
         )
 
-    def subtract(self, span: Span) -> Span:
+    def subtract(self, span: "Span") -> "Span":
         assert self.filename == span.filename, "Spans must be from the same file"
         return Span(
             self.filename,
@@ -75,7 +73,7 @@ class Span:
         )
 
     @staticmethod
-    def invalid() -> Span:
+    def invalid() -> "Span":
         return Span("", -1, -1, -1, -1)
 
 
@@ -84,12 +82,12 @@ class Id:
     names: List[str]
 
     @staticmethod
-    def from_str(s: str) -> Id:
+    def from_str(s: str) -> "Id":
         """Parse and Id from a `.` separated string."""
         return Id(s.split("."))
 
     @staticmethod
-    def invalid() -> Id:
+    def invalid() -> "Id":
         return Id([])
 
     @property
@@ -111,12 +109,6 @@ class Node:
     span: Span
 
 
-@attr.s(auto_attribs=True)
-class Parameter(Node):
-    name: Name
-    ty: Optional[Type]
-
-
 class Type(Node):
     pass
 
@@ -130,8 +122,9 @@ class Expr(Node):
 
 
 @attr.s(auto_attribs=True)
-class Module(Node):
-    funcs: Dict[Name, Union[Class, Function]]
+class Parameter(Node):
+    name: Name
+    ty: Optional[Type]
 
 
 @attr.s(auto_attribs=True)
@@ -139,13 +132,33 @@ class Var(Expr):
     name: Id
 
     @staticmethod
-    def invalid() -> Var:
+    def invalid() -> "Var":
         return Var(Span.invalid(), Id.invalid())
 
 
 @attr.s(auto_attribs=True)
 class TypeVar(Type):
     name: Id
+
+
+class BuiltinOp(Enum):
+    Add = auto()
+    Sub = auto()
+    Mul = auto()
+    Div = auto()
+    FloorDiv = auto()
+    Mod = auto()
+    Subscript = auto()
+    SubscriptAssign = auto()
+    And = auto()
+    Or = auto()
+    Eq = auto()
+    GT = auto()
+    GE = auto()
+    LT = auto()
+    LE = auto()
+    Not = auto()
+    Invalid = auto()  # placeholder op if op failed to parse
 
 
 @attr.s(auto_attribs=True)
@@ -180,26 +193,6 @@ class TypeSlice(Type):
 @attr.s(auto_attribs=True)
 class Tuple(Expr):
     values: Sequence[Expr]
-
-
-class BuiltinOp(Enum):
-    Add = auto()
-    Sub = auto()
-    Mul = auto()
-    Div = auto()
-    FloorDiv = auto()
-    Mod = auto()
-    Subscript = auto()
-    SubscriptAssign = auto()
-    And = auto()
-    Or = auto()
-    Eq = auto()
-    GT = auto()
-    GE = auto()
-    LT = auto()
-    LE = auto()
-    Not = auto()
-    Invalid = auto()  # placeholder op if op failed to parse
 
 
 @attr.s(auto_attribs=True)
@@ -243,16 +236,16 @@ class UnassignedCall(Stmt):
 
 
 @attr.s(auto_attribs=True)
+class Block(Node):
+    stmts: List[Stmt]
+
+
+@attr.s(auto_attribs=True)
 class Function(Node):
     name: Name
     params: List[Parameter]
     ret_type: Optional[Type]
     body: Block
-
-
-@attr.s(auto_attribs=True)
-class Block(Node):
-    stmts: List[Stmt]
 
 
 @attr.s(auto_attribs=True)
@@ -279,3 +272,8 @@ class If(Stmt):
 @attr.s(auto_attribs=True)
 class Class(Node):
     funcs: Dict[Name, Function]
+
+
+@attr.s(auto_attribs=True)
+class Module(Node):
+    funcs: Dict[Name, Union[Class, Function]]

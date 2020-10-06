@@ -1,4 +1,3 @@
-from __future__ import annotations
 import synr
 from synr import __version__
 from typing import Any
@@ -301,6 +300,14 @@ def test_literals():
     assert fn.body.stmts[2].rhs.values[0].value == 1
     assert fn.body.stmts[2].rhs.values[1].value == 2.0
     assert isinstance(fn.body.stmts[2].rhs, synr.ast.Tuple)
+
+
+class X:
+    pass
+
+
+class Y:
+    pass
 
 
 def func_type(x: X) -> Y:

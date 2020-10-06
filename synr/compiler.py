@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import attr
 import ast as py_ast
 import inspect
