@@ -1,6 +1,7 @@
 import synr
 from synr import __version__
 from typing import Any
+import inspect
 
 
 def test_version():
@@ -369,8 +370,11 @@ def func_err(x=2, *args, **kwargs):
 
 
 def test_err_msg():
+    _, start = inspect.getsourcelines(func_err)
     errs = to_ast_err(func_err)
-    def_errs = sorted([(x[1], x[2]) for x in errs[1]], key=lambda x: x[1].start_column)
+    def_errs = sorted(
+        [(x[1], x[2]) for x in errs[start]], key=lambda x: x[1].start_column
+    )
 
     def check_err(err, msg, filename, start_line, start_column):
         assert (
@@ -391,26 +395,26 @@ def test_err_msg():
         def_errs[0],
         "currently synr does not support defaults",
         "test_synr.py",
-        1,
+        start,
         16,
     )
     check_err(
         def_errs[1],
         "currently synr does not support varargs",
         "test_synr.py",
-        1,
+        start,
         20,
     )
     check_err(
         def_errs[2],
         "currently synr does not support kwarg",
         "test_synr.py",
-        1,
+        start,
         28,
     )
 
-    assert errs[2][0][1] == "Left hand side of assignment must be a variable"
-    assert errs[3][0][1] == "Empty type assignment not supported"
+    assert errs[start + 1][0][1] == "Left hand side of assignment must be a variable"
+    assert errs[start + 2][0][1] == "Empty type assignment not supported"
 
 
 if __name__ == "__main__":

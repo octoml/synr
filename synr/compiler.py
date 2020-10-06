@@ -39,7 +39,7 @@ class Compiler:
         diagnostic_ctx: DiagnosticContext,
     ):
         self.filename = filename
-        self.start_line = 0  # FIXME: start_line
+        self.start_line = start_line - 1
         self.transformer = transformer
         self.diagnostic_ctx = diagnostic_ctx
 
@@ -505,7 +505,12 @@ def to_ast(
     assert source_name, "source name must be valid"
     lines, start_line = inspect.getsourcelines(program)
     source = "".join(lines)
-    diagnostic_ctx.add_source(source_name, source)
+    mod = inspect.getmodule(program)
+    if mod is not None:
+        full_source = inspect.getsource(mod)
+    else:
+        full_source = source
+    diagnostic_ctx.add_source(source_name, full_source)
     program_ast = py_ast.parse(source)
     compiler = Compiler(source_name, start_line, transformer, diagnostic_ctx)
     assert isinstance(program_ast, py_ast.Module), "support module"
