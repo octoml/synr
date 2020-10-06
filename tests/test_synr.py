@@ -373,17 +373,53 @@ def test_err_msg():
     def_errs = sorted([(x[1], x[2]) for x in errs[1]], key=lambda x: x[1].start_column)
 
     def check_err(err, msg, filename, start_line, start_column, end_line, end_column):
-        assert err[0] == msg, f"Error message `{err[0]}` does not match expected message `{msg}`"
+        assert (
+            err[0] == msg
+        ), f"Error message `{err[0]}` does not match expected message `{msg}`"
         span = err[1]
-        assert span.filename.endswith(filename), f"File name `{span.filename}` does not end with `{filename}`"
-        assert span.start_line == start_line, f"Starting line of error does not match expected: {span.start_line} vs {start_line}"
-        assert span.start_column == start_column, f"Starting column of error does not match expected: {span.start_column} vs {start_column}"
-        assert span.end_line == end_line, f"Ending line of error does not match expected: {span.end_line} vs {end_line}"
-        assert span.end_column == end_column, f"Ending column of error does not match expected: {span.end_column} vs {end_column}"
+        assert span.filename.endswith(
+            filename
+        ), f"File name `{span.filename}` does not end with `{filename}`"
+        assert (
+            span.start_line == start_line
+        ), f"Starting line of error does not match expected: {span.start_line} vs {start_line}"
+        assert (
+            span.start_column == start_column
+        ), f"Starting column of error does not match expected: {span.start_column} vs {start_column}"
+        assert (
+            span.end_line == end_line
+        ), f"Ending line of error does not match expected: {span.end_line} vs {end_line}"
+        assert (
+            span.end_column == end_column
+        ), f"Ending column of error does not match expected: {span.end_column} vs {end_column}"
 
-    check_err(def_errs[0], "currently synr does not support defaults", "test_synr.py", 1, 16, 1, 17)
-    check_err(def_errs[1], "currently synr does not support varargs", "test_synr.py", 1, 20, 1, 24)
-    check_err(def_errs[2], "currently synr does not support kwarg", "test_synr.py", 1, 28, 1, 34)
+    check_err(
+        def_errs[0],
+        "currently synr does not support defaults",
+        "test_synr.py",
+        1,
+        16,
+        1,
+        17,
+    )
+    check_err(
+        def_errs[1],
+        "currently synr does not support varargs",
+        "test_synr.py",
+        1,
+        20,
+        1,
+        24,
+    )
+    check_err(
+        def_errs[2],
+        "currently synr does not support kwarg",
+        "test_synr.py",
+        1,
+        28,
+        1,
+        34,
+    )
 
     assert errs[2][0][1] == "Left hand side of assignment must be a variable"
     assert errs[3][0][1] == "Empty type assignment not supported"
