@@ -297,7 +297,9 @@ class Compiler:
 
         elif isinstance(stmt, py_ast.Assert):
             return Assert(
-                stmt_span, self.compile_expr(stmt.test), None if stmt.msg is None else self.compile_expr(stmt.msg)
+                stmt_span,
+                self.compile_expr(stmt.test),
+                None if stmt.msg is None else self.compile_expr(stmt.msg),
             )
 
         else:
@@ -426,7 +428,7 @@ class Compiler:
         if isinstance(expr, py_ast.Dict):
             return DictLiteral(
                 expr_span,
-                [self.compile_expr(x) for x in expr.keys], # type: ignore
+                [self.compile_expr(x) for x in expr.keys],  # type: ignore
                 [self.compile_expr(x) for x in expr.values],
             )
         if isinstance(expr, py_ast.List):
@@ -545,7 +547,7 @@ def to_ast(
         full_source = source
         start_line = 0
     else:
-        source_name = inspect.getsourcefile(program) # type: ignore
+        source_name = inspect.getsourcefile(program)  # type: ignore
         assert source_name, "source name must be valid"
         lines, start_line = inspect.getsourcelines(program)
         source = "".join(lines)
