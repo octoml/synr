@@ -258,19 +258,22 @@ class Compiler:
                     self.span_from_asts(stmt.items),
                 )
             wth = stmt.items[0]
+            lhs_var: Optional[Var]
             if wth.optional_vars:
-                rhs = self.compile_expr(wth.optional_vars)
-                if not isinstance(rhs, Var):
+                l = self.compile_expr(wth.optional_vars)
+                if not isinstance(l, Var):
                     self.error(
                         "Right hand side of with statement (y in `with x as y:`) must be a variable",
                         self.span_from_ast(wth.optional_vars),
                     )
-                    rhs = Var.invalid()
+                    lhs_var = Var.invalid()
+                else:
+                    lhs_var = l
             else:
-                rhs = None
-            lhs = self.compile_expr(wth.context_expr)
+                lhs_var = None
+            rhs = self.compile_expr(wth.context_expr)
             body = self.compile_block(stmt.body)
-            return With(self.span_from_ast(stmt), lhs, rhs, body)
+            return With(self.span_from_ast(stmt), lhs_var, rhs, body)
 
         elif isinstance(stmt, py_ast.If):
             true = self.compile_block(stmt.body)
@@ -294,20 +297,22 @@ class Compiler:
 
         elif isinstance(stmt, py_ast.Assert):
             return Assert(
-                stmt_span, self.compile_expr(stmt.test), self.compile_expr(stmt.msg)
+                stmt_span, self.compile_expr(stmt.test), None if stmt.msg is None else self.compile_expr(stmt.msg)
             )
 
         else:
             self.error(f"Found unexpected {type(stmt)} when compiling stmt", stmt_span)
             return Stmt(Span.invalid())
 
-    def compile_var(self, expr: py_ast.expr) -> Var:
+    def compile_var(self, expr: py_ast.expr) -> Union[Var, Attr]:
         expr_span = self.span_from_ast(expr)
         if isinstance(expr, py_ast.Name):
             return Var(expr_span, Id(expr.id))
         if isinstance(expr, py_ast.Attribute):
-            sub_var = self.compile_var(expr.value)
-            id_span = expr_span.subtract(sub_var.span) # TODO: this still includes the .
+            sub_var = self.compile_expr(expr.value)
+            id_span = expr_span.subtract(
+                sub_var.span
+            )  # TODO: this still includes the .
             return Attr(expr_span, sub_var, Id(expr.attr))
         self.error("Expected a variable name of the form a.b.c", expr_span)
         return Var.invalid()
@@ -421,7 +426,7 @@ class Compiler:
         if isinstance(expr, py_ast.Dict):
             return DictLiteral(
                 expr_span,
-                [self.compile_expr(x) for x in expr.keys],
+                [self.compile_expr(x) for x in expr.keys], # type: ignore
                 [self.compile_expr(x) for x in expr.values],
             )
         if isinstance(expr, py_ast.List):
@@ -464,21 +469,15 @@ class Compiler:
         return Tuple(s.span, [s])
 
     def compile_call(self, call: py_ast.Call) -> Call:
-        kws: Dict[Name, Expr] = dict()
+        kws: Dict[Expr, Expr] = dict()
         for x in call.keywords:
             if x.arg in kws:
                 self.error(
                     f"Duplicate keyword argument {x.arg}", self.span_from_ast(x.value)
                 )
-            kws[x] = self.compile_expr(x.value)
+            kws[Constant(self.span_from_ast(x), x.arg)] = self.compile_expr(x.value)
 
         func = self.compile_expr(call.func)
-        if func is not None and not isinstance(func, Var):
-            self.error(
-                f"Expected function name, but got {type(func)}",
-                self.span_from_ast(call.func),
-            )
-            func = Var.invalid()
 
         args = []
         for arg in call.args:
@@ -501,7 +500,7 @@ class Compiler:
                 self._expr2type(expr.end),
             )
         if isinstance(expr, Call):
-            if expr.func_name.name == BuiltinOp.Subscript:
+            if expr.func_name.name == BuiltinOp.Subscript:  # type: ignore
                 assert isinstance(
                     expr.params[0], Var
                 ), f"Expected subscript call to have lhs of Var, but it is {type(expr.params[0])}"
@@ -546,7 +545,7 @@ def to_ast(
         full_source = source
         start_line = 0
     else:
-        source_name = inspect.getsourcefile(program)
+        source_name = inspect.getsourcefile(program) # type: ignore
         assert source_name, "source name must be valid"
         lines, start_line = inspect.getsourcelines(program)
         source = "".join(lines)

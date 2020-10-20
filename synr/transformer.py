@@ -1,6 +1,7 @@
 from typing import TypeVar, Generic, Union
 
 from . import ast
+from .diagnostic_context import DiagnosticContext
 
 M = TypeVar("M")
 F = TypeVar("F")
@@ -51,7 +52,7 @@ class Transformer(Generic[M, F, S, E, B, T]):
         pass
 
     def transform_block(self, expr: ast.Block) -> B:
-        return [self.transform(x) for x in expr.stmts]
+        pass
 
     def transform_parameter(self, expr: ast.Parameter) -> P:
         pass

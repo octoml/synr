@@ -5,6 +5,8 @@ from enum import Enum, auto
 import typing
 from typing import Optional, Any, List, Dict, Union, Sequence
 
+NoneType = type(None)
+
 
 @attr.s(auto_attribs=True)
 class Span:
@@ -118,6 +120,7 @@ class Var(Expr):
     def invalid() -> "Var":
         return Var(Span.invalid(), Id.invalid())
 
+
 @attr.s(auto_attribs=True)
 class Attr(Expr):
     object: Expr
@@ -127,6 +130,7 @@ class Attr(Expr):
 @attr.s(auto_attribs=True)
 class TypeVar(Type):
     id: Id
+
 
 @attr.s(auto_attribs=True)
 class TypeAttr(Type):
@@ -156,7 +160,7 @@ class BuiltinOp(Enum):
 
 @attr.s(auto_attribs=True)
 class TypeCall(Type):
-    id: Union[Id, BuiltinOp]
+    id: Union[Expr, BuiltinOp]
     params: List[Type]
 
 
@@ -173,7 +177,7 @@ class TypeTuple(Type):
 
 @attr.s(auto_attribs=True)
 class TypeConstant(Type):
-    value: Union[str, type(None), bool, complex, float, int]
+    value: Union[str, NoneType, bool, complex, float, int]
 
 
 @attr.s(auto_attribs=True)
@@ -206,12 +210,12 @@ class Op(Node):
 
 @attr.s(auto_attribs=True)
 class Constant(Expr):
-    value: Union[float, int, complex]
+    value: Union[str, NoneType, bool, complex, float, int]
 
 
 @attr.s(auto_attribs=True)
 class Call(Expr):
-    func_name: Union[Var, Op]
+    func_name: Union[Expr, Op]
     params: List[Expr]
     keyword_params: Dict[Expr, Expr]
 
@@ -262,8 +266,8 @@ class For(Stmt):
 
 @attr.s(auto_attribs=True)
 class With(Stmt):
-    lhs: Expr
-    rhs: Optional[Var]
+    lhs: Optional[Var]
+    rhs: Expr
     body: Block
 
 
