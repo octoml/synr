@@ -68,9 +68,13 @@ class Compiler:
             span = Span.from_ast(self.filename, node.value)
         else:
             span = Span.from_ast(self.filename, node)
-        span.start_line += self.start_line
-        span.end_line += self.start_line
-        return span
+        return Span(
+            span.filename,
+            span.start_line + self.start_line,
+            span.start_column,
+            span.end_line + self.start_line,
+            span.end_column,
+        )
 
     def span_from_asts(self, nodes: Sequence[py_ast.AST]) -> Span:
         return Span.union([self.span_from_ast(node) for node in nodes])

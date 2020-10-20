@@ -8,7 +8,7 @@ from typing import Optional, Any, List, Dict, Union, Sequence
 NoneType = type(None)
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, frozen=True)
 class Span:
     filename: str
     start_line: int
@@ -77,7 +77,7 @@ class Span:
         return Span("", -1, -1, -1, -1)
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, frozen=True)
 class Id:
     name: str
 
@@ -89,7 +89,7 @@ class Id:
 Name = str  # TODO: add span to this
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, frozen=True)
 class Node:
     span: Span
 
@@ -106,13 +106,13 @@ class Expr(Node):
     pass
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, frozen=True)
 class Parameter(Node):
     name: Name
     ty: Optional[Type]
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, frozen=True)
 class Var(Expr):
     id: Id
 
@@ -121,18 +121,18 @@ class Var(Expr):
         return Var(Span.invalid(), Id.invalid())
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, frozen=True)
 class Attr(Expr):
     object: Expr
     field: Id
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, frozen=True)
 class TypeVar(Type):
     id: Id
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, frozen=True)
 class TypeAttr(Type):
     object: Type
     field: Id
@@ -158,98 +158,98 @@ class BuiltinOp(Enum):
     Invalid = auto()  # placeholder op if op failed to parse
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, frozen=True)
 class TypeCall(Type):
     id: Union[Expr, BuiltinOp]
     params: List[Type]
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, frozen=True)
 class TypeApply(Type):
     id: Id
     params: Sequence[Type]
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, frozen=True)
 class TypeTuple(Type):
     values: Sequence[Expr]
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, frozen=True)
 class TypeConstant(Type):
     value: Union[str, NoneType, bool, complex, float, int]
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, frozen=True)
 class TypeSlice(Type):
     start: Type
     step: Type
     end: Type
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, frozen=True)
 class Tuple(Expr):
     values: Sequence[Expr]
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, frozen=True)
 class DictLiteral(Expr):
     keys: Sequence[Expr]
     values: Sequence[Expr]
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, frozen=True)
 class ArrayLiteral(Expr):
     values: Sequence[Expr]
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, frozen=True)
 class Op(Node):
     name: BuiltinOp
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, frozen=True)
 class Constant(Expr):
     value: Union[str, NoneType, bool, complex, float, int]
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, frozen=True)
 class Call(Expr):
     func_name: Union[Expr, Op]
     params: List[Expr]
     keyword_params: Dict[Expr, Expr]
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, frozen=True)
 class Slice(Expr):
     start: Expr
     step: Expr
     end: Expr
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, frozen=True)
 class Return(Stmt):
     value: Optional[Expr]
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, frozen=True)
 class Assign(Stmt):
     lhs: Var
     ty: Optional[Type]
     rhs: Expr
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, frozen=True)
 class UnassignedCall(Stmt):
     call: Call
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, frozen=True)
 class Block(Node):
     stmts: List[Stmt]
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, frozen=True)
 class Function(Node):
     name: Name
     params: List[Parameter]
@@ -257,38 +257,38 @@ class Function(Node):
     body: Block
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, frozen=True)
 class For(Stmt):
     lhs: Var
     rhs: Expr
     body: Block
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, frozen=True)
 class With(Stmt):
     lhs: Optional[Var]
     rhs: Expr
     body: Block
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, frozen=True)
 class Assert(Stmt):
     cond: Expr
     msg: Optional[Expr]
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, frozen=True)
 class If(Stmt):
     condition: Expr
     true: Block
     false: Block
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, frozen=True)
 class Class(Node):
     funcs: Dict[Name, Function]
 
 
-@attr.s(auto_attribs=True)
+@attr.s(auto_attribs=True, frozen=True)
 class Module(Node):
     funcs: Dict[Name, Union[Class, Function]]
