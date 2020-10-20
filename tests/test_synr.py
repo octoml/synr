@@ -87,8 +87,8 @@ def test_with():
     assert isinstance(
         wth, synr.ast.With
     ), "Did not find With statement, found %s" % type(wth)
-    assert wth.lhs.id.name == "x"
-    assert wth.rhs.id.name == "y"
+    assert wth.rhs.id.name == "x"
+    assert wth.lhs.id.name == "y"
     assert isinstance(wth.body.stmts[0], synr.ast.Return)
     assert wth.body.stmts[0].value.id.name == "x"
 
