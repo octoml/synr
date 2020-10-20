@@ -273,7 +273,7 @@ class With(Stmt):
 
 @attr.s(auto_attribs=True, frozen=True)
 class Assert(Stmt):
-    cond: Expr
+    condition: Expr
     msg: Optional[Expr]
 
 
