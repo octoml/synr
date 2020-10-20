@@ -8,3 +8,4 @@ __version__ = "0.1.0"
 
 from .compiler import to_ast
 from .diagnostic_context import PrinterDiagnosticContext, DiagnosticContext
+from .transformer import Transformer

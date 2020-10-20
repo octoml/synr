@@ -63,6 +63,9 @@ class Compiler:
             span = Span.union(spans)
         elif isinstance(node, py_ast.Index):
             span = Span.from_ast(self.filename, node.value)
+        elif isinstance(node, py_ast.keyword):
+            # unfortunately this span does not include the keyword name itself
+            span = Span.from_ast(self.filename, node.value)
         else:
             span = Span.from_ast(self.filename, node)
         span.start_line += self.start_line
@@ -72,7 +75,7 @@ class Compiler:
     def span_from_asts(self, nodes: Sequence[py_ast.AST]) -> Span:
         return Span.union([self.span_from_ast(node) for node in nodes])
 
-    def compile_module(self, program: py_ast.Module) -> Any:
+    def compile_module(self, program: py_ast.Module) -> Module:
         funcs: Dict[Name, Union[Function, Class]] = {}
         # Merge later
         span = self.span_from_ast(program.body[0])
@@ -201,19 +204,19 @@ class Compiler:
                         op_span,
                     )
                     op = BuiltinOp.Invalid
-                rhs = Call(stmt_span, Op(op_span, op), [lhs, rhs])
+                rhs = Call(stmt_span, Op(op_span, op), [lhs, rhs], {})
 
             # if the lhs is a subscript, we replace the whole expression with a SubscriptAssign
             if (
                 isinstance(lhs, Call)
-                and isinstance(lhs.name, Op)
-                and lhs.name.name == BuiltinOp.Subscript
+                and isinstance(lhs.func_name, Op)
+                and lhs.func_name.name == BuiltinOp.Subscript
             ):
                 return UnassignedCall(
                     stmt_span,
                     Call(
                         stmt_span,
-                        Op(lhs.name.span, BuiltinOp.SubscriptAssign),
+                        Op(lhs.func_name.span, BuiltinOp.SubscriptAssign),
                         [
                             lhs.params[0],
                             Tuple(
@@ -222,6 +225,7 @@ class Compiler:
                             ),
                             rhs,
                         ],
+                        {},
                     ),
                 )
             elif not isinstance(lhs, Var):
@@ -263,10 +267,7 @@ class Compiler:
                     )
                     rhs = Var.invalid()
             else:
-                self.error(
-                    "With statement must contain an `as _`", self.span_from_ast(wth)
-                )
-                rhs = Var.invalid()
+                rhs = None
             lhs = self.compile_expr(wth.context_expr)
             body = self.compile_block(stmt.body)
             return With(self.span_from_ast(stmt), lhs, rhs, body)
@@ -280,6 +281,22 @@ class Compiler:
             condition = self.compile_expr(stmt.test)
             return If(stmt_span, condition, true, false)
 
+        elif isinstance(stmt, py_ast.Expr):
+            expr = self.compile_expr(stmt.value)
+            if isinstance(expr, Call):
+                return UnassignedCall(expr.span, expr)
+            else:
+                self.error(
+                    f"Found unexpected expression of type {type(expr)} when looking for a statement",
+                    expr.span,
+                )
+                return Stmt(Span.invalid())
+
+        elif isinstance(stmt, py_ast.Assert):
+            return Assert(
+                stmt_span, self.compile_expr(stmt.test), self.compile_expr(stmt.msg)
+            )
+
         else:
             self.error(f"Found unexpected {type(stmt)} when compiling stmt", stmt_span)
             return Stmt(Span.invalid())
@@ -287,12 +304,11 @@ class Compiler:
     def compile_var(self, expr: py_ast.expr) -> Var:
         expr_span = self.span_from_ast(expr)
         if isinstance(expr, py_ast.Name):
-            return Var(expr_span, Id([expr.id]))
+            return Var(expr_span, Id(expr.id))
         if isinstance(expr, py_ast.Attribute):
             sub_var = self.compile_var(expr.value)
-            names = sub_var.name.names
-            names.append(expr.attr)
-            return Var(expr_span, Id(names))
+            id_span = expr_span.subtract(sub_var.span) # TODO: this still includes the .
+            return Attr(expr_span, sub_var, Id(expr.attr))
         self.error("Expected a variable name of the form a.b.c", expr_span)
         return Var.invalid()
 
@@ -301,9 +317,17 @@ class Compiler:
         if isinstance(expr, py_ast.Name) or isinstance(expr, py_ast.Attribute):
             return self.compile_var(expr)
         if isinstance(expr, py_ast.Constant):
-            if isinstance(expr.value, float) or isinstance(expr.value, int):
+            if (
+                isinstance(expr.value, float)
+                or isinstance(expr.value, int)
+                or isinstance(expr.value, str)
+                or isinstance(expr.value, type(None))
+                or isinstance(expr.value, bool)
+            ):
                 return Constant(expr_span, expr.value)
-            self.error("Only float and int constants are allowed", expr_span)
+            self.error(
+                "Only float, int, str, bool, and None constants are allowed", expr_span
+            )
             return Constant(expr_span, float("nan"))
         if isinstance(expr, py_ast.Num):
             return Constant(expr_span, expr.n)
@@ -323,7 +347,7 @@ class Compiler:
                     op_span,
                 )
                 op = BuiltinOp.Invalid
-            return Call(expr_span, Op(op_span, op), [lhs, rhs])
+            return Call(expr_span, Op(op_span, op), [lhs, rhs], {})
         if isinstance(expr, py_ast.Compare):
             lhs = self.compile_expr(expr.left)
             if (
@@ -343,7 +367,8 @@ class Compiler:
                 return Call(
                     expr_span,
                     Op(op_span, BuiltinOp.Not),
-                    [Call(expr_span, Op(op_span, BuiltinOp.Eq), [lhs, rhs])],
+                    [Call(expr_span, Op(op_span, BuiltinOp.Eq), [lhs, rhs], {})],
+                    {},
                 )
             op = self.builtin_ops.get(ty2)
             if op is None:
@@ -352,7 +377,7 @@ class Compiler:
                     op_span,
                 )
                 op = BuiltinOp.Invalid
-            return Call(expr_span, Op(op_span, op), [lhs, rhs])
+            return Call(expr_span, Op(op_span, op), [lhs, rhs], {})
         if isinstance(expr, py_ast.UnaryOp):
             lhs = self.compile_expr(expr.operand)
             op_span = expr_span.subtract(lhs.span)
@@ -364,7 +389,7 @@ class Compiler:
                     op_span,
                 )
                 op = BuiltinOp.Invalid
-            return Call(expr_span, Op(op_span, op), [lhs])
+            return Call(expr_span, Op(op_span, op), [lhs], {})
         if isinstance(expr, py_ast.BoolOp):
             lhs = self.compile_expr(expr.values[0])
             rhs = self.compile_expr(expr.values[1])
@@ -377,21 +402,30 @@ class Compiler:
                     op_span,
                 )
                 op = BuiltinOp.Invalid
-            call = Call(lhs.span.merge(rhs.span), Op(op_span, op), [lhs, rhs])
+            call = Call(lhs.span.merge(rhs.span), Op(op_span, op), [lhs, rhs], {})
             for arg in expr.values[2:]:
                 rhs = self.compile_expr(arg)
                 call = Call(
                     call.span.merge(rhs.span),
                     Op(call.span.between(rhs.span), op),
                     [call, rhs],
+                    {},
                 )
             return call
         if isinstance(expr, py_ast.Subscript):
             lhs = self.compile_expr(expr.value)
             rhs = self.compile_slice(expr.slice)
-            return Call(expr_span, Op(rhs.span, BuiltinOp.Subscript), [lhs, rhs])
+            return Call(expr_span, Op(rhs.span, BuiltinOp.Subscript), [lhs, rhs], {})
         if isinstance(expr, py_ast.Tuple):
             return Tuple(expr_span, [self.compile_expr(x) for x in expr.elts])
+        if isinstance(expr, py_ast.Dict):
+            return DictLiteral(
+                expr_span,
+                [self.compile_expr(x) for x in expr.keys],
+                [self.compile_expr(x) for x in expr.values],
+            )
+        if isinstance(expr, py_ast.List):
+            return ArrayLiteral(expr_span, [self.compile_expr(x) for x in expr.elts])
 
         self.error(f"Unexpected expression {type(expr)}", expr_span)
         return Expr(Span.invalid())
@@ -430,10 +464,13 @@ class Compiler:
         return Tuple(s.span, [s])
 
     def compile_call(self, call: py_ast.Call) -> Call:
-        if len(call.keywords) > 0:
-            self.error(
-                "Keyword arguments are not allowed", self.span_from_asts(call.keywords)
-            )
+        kws: Dict[Name, Expr] = dict()
+        for x in call.keywords:
+            if x.arg in kws:
+                self.error(
+                    f"Duplicate keyword argument {x.arg}", self.span_from_ast(x.value)
+                )
+            kws[x] = self.compile_expr(x.value)
 
         func = self.compile_expr(call.func)
         if func is not None and not isinstance(func, Var):
@@ -447,11 +484,11 @@ class Compiler:
         for arg in call.args:
             args.append(self.compile_expr(arg))
 
-        return Call(self.span_from_ast(call), func, args)
+        return Call(self.span_from_ast(call), func, args, kws)
 
     def _expr2type(self, expr: Expr) -> Type:
         if isinstance(expr, Var):
-            return TypeVar(expr.span, expr.name)
+            return TypeVar(expr.span, expr.id)
         if isinstance(expr, Constant):
             return TypeConstant(expr.span, expr.value)
         if isinstance(expr, Tuple):
@@ -464,7 +501,7 @@ class Compiler:
                 self._expr2type(expr.end),
             )
         if isinstance(expr, Call):
-            if expr.name.name == BuiltinOp.Subscript:
+            if expr.func_name.name == BuiltinOp.Subscript:
                 assert isinstance(
                     expr.params[0], Var
                 ), f"Expected subscript call to have lhs of Var, but it is {type(expr.params[0])}"
@@ -473,9 +510,11 @@ class Compiler:
                 ), f"Expected subscript call to have rhs of Tuple, but it is {type(expr.params[1])}"
                 return TypeApply(
                     expr.span,
-                    expr.params[0].name,
+                    expr.params[0].id,
                     [self._expr2type(x) for x in expr.params[1].values],
                 )
+        if isinstance(expr, Attr):
+            return TypeAttr(expr.span, self._expr2type(expr.object), expr.field)
         self.error(f"Found unknown kind (type of type) {type(expr)}", expr.span)
         return Type(Span.invalid())
 
@@ -497,19 +536,25 @@ class Compiler:
 
 
 def to_ast(
-    program: Any,
+    program: Union[Any, str],
     diagnostic_ctx: DiagnosticContext,
     transformer: Optional[Transformer] = None,
 ) -> Any:
-    source_name = inspect.getsourcefile(program)
-    assert source_name, "source name must be valid"
-    lines, start_line = inspect.getsourcelines(program)
-    source = "".join(lines)
-    mod = inspect.getmodule(program)
-    if mod is not None:
-        full_source = inspect.getsource(mod)
-    else:
+    if isinstance(program, str):
+        source_name = "<string input>"
+        source = program
         full_source = source
+        start_line = 0
+    else:
+        source_name = inspect.getsourcefile(program)
+        assert source_name, "source name must be valid"
+        lines, start_line = inspect.getsourcelines(program)
+        source = "".join(lines)
+        mod = inspect.getmodule(program)
+        if mod is not None:
+            full_source = inspect.getsource(mod)
+        else:
+            full_source = source
     diagnostic_ctx.add_source(source_name, full_source)
     program_ast = py_ast.parse(source)
     compiler = Compiler(source_name, start_line, transformer, diagnostic_ctx)
@@ -518,4 +563,11 @@ def to_ast(
     err = diagnostic_ctx.render()
     if err is not None:
         return err
-    return prog
+    if transformer is not None:
+        transformed = transformer.do_transform(prog, diagnostic_ctx)
+        err = diagnostic_ctx.render()
+        if err is not None:
+            return err
+        return transformed
+    else:
+        return prog

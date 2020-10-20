@@ -35,7 +35,7 @@ def test_id_function():
     ast_fn = assert_one_fn(module, "identity", no_params=1)
     return_var = ast_fn.body.stmts[-1].value
     assert isinstance(return_var, synr.ast.Var)
-    assert return_var.name.full_name == "x"
+    assert return_var.id.name == "x"
 
 
 class ExampleClass:
@@ -67,12 +67,12 @@ def test_for():
     fn = assert_one_fn(module, "func_for", no_params=0)
     fr = fn.body.stmts[0]
     assert isinstance(fr, synr.ast.For), "Did not find for loop"
-    assert fr.lhs.name.full_name == "x", "For lhs is incorrect"
+    assert fr.lhs.id.name == "x", "For lhs is incorrect"
     assert isinstance(fr.rhs, synr.ast.Call)
-    assert fr.rhs.name.name.full_name == "range"
+    assert fr.rhs.func_name.id.name == "range"
     assert fr.rhs.params[0].value == 3
     assert isinstance(fr.body.stmts[0], synr.ast.Return)
-    assert fr.body.stmts[0].value.name.full_name == "x"
+    assert fr.body.stmts[0].value.id.name == "x"
 
 
 def func_with():
@@ -87,10 +87,10 @@ def test_with():
     assert isinstance(
         wth, synr.ast.With
     ), "Did not find With statement, found %s" % type(wth)
-    assert wth.lhs.name.full_name == "x"
-    assert wth.rhs.name.full_name == "y"
+    assert wth.lhs.id.name == "x"
+    assert wth.rhs.id.name == "y"
     assert isinstance(wth.body.stmts[0], synr.ast.Return)
-    assert wth.body.stmts[0].value.name.full_name == "x"
+    assert wth.body.stmts[0].value.id.name == "x"
 
 
 def func_block():
@@ -120,7 +120,7 @@ def test_assign():
     assign = fn.body.stmts[0]
     assert isinstance(assign, synr.ast.Assign)
     assert isinstance(assign.lhs, synr.ast.Var)
-    assert assign.lhs.name.full_name == "y"
+    assert assign.lhs.id.name == "y"
     assert isinstance(assign.rhs, synr.ast.Constant)
     assert assign.rhs.value == 2
 
@@ -133,7 +133,9 @@ def test_var():
     module = to_ast(func_var)
     fn = assert_one_fn(module, "func_var", no_params=0)
     ret = fn.body.stmts[0]
-    assert ret.value.name.names == ["x", "y", "z"]
+    assert ret.value.field.name == "z"
+    assert ret.value.object.field.name == "y"
+    assert ret.value.object.object.id.name == "x"
 
 
 def func_binop():
@@ -168,7 +170,7 @@ def test_binop():
 
     def verify(stmt, op, vals):
         assert isinstance(stmt, synr.ast.Call)
-        assert stmt.name.name == op, f"Expect {op.name}, got {stmt.name.name}"
+        assert stmt.func_name.name == op, f"Expect {op.name}, got {stmt.func_name}"
         assert len(vals) == len(stmt.params)
         for i in range(len(vals)):
             assert stmt.params[i].value == vals[i]
@@ -182,10 +184,10 @@ def test_binop():
     verify(stmts[6].rhs, synr.ast.BuiltinOp.Eq, [1, 2])
 
     assert isinstance(stmts[7].rhs, synr.ast.Call)
-    assert stmts[7].rhs.name.name == synr.ast.BuiltinOp.Not
+    assert stmts[7].rhs.func_name.name == synr.ast.BuiltinOp.Not
     assert len(stmts[7].rhs.params) == 1
     call = stmts[7].rhs.params[0]
-    assert call.name.name == synr.ast.BuiltinOp.Eq
+    assert call.func_name.name == synr.ast.BuiltinOp.Eq
     assert call.params[0].value == 1
     assert call.params[1].value == 2
 
@@ -199,9 +201,9 @@ def test_binop():
 
     def verify_assign(stmt, op, vals):
         assert isinstance(stmt.rhs, synr.ast.Call)
-        assert stmt.rhs.name.name == op, f"Expect {op.name}, got {stmt.name.name}"
+        assert stmt.rhs.func_name.name == op, f"Expect {op.name}, got {stmt.id.name}"
         assert len(vals) + 1 == len(stmt.rhs.params)
-        assert stmt.lhs.name.full_name == stmt.rhs.params[0].name.full_name
+        assert stmt.lhs.id.name == stmt.rhs.params[0].id.name
         for i in range(len(vals)):
             assert stmt.rhs.params[i + 1].value == vals[i]
 
@@ -232,7 +234,7 @@ def test_if():
     assert if_stmt.true.stmts[0].value.value == 1
     cond = if_stmt.condition
     assert isinstance(cond, synr.ast.Call)
-    assert cond.name.name == synr.ast.BuiltinOp.Or
+    assert cond.func_name.name == synr.ast.BuiltinOp.Or
     assert cond.params[1].value == 4
     elif_stmt = if_stmt.false.stmts[0]
     assert isinstance(elif_stmt.true.stmts[0], synr.ast.Return)
@@ -256,12 +258,12 @@ def test_subscript():
 
     sub = fn.body.stmts[0].rhs
     assert isinstance(sub, synr.ast.Call)
-    assert sub.name.name == synr.ast.BuiltinOp.Subscript
-    assert sub.params[0].name.full_name == "x"
+    assert sub.func_name.name == synr.ast.BuiltinOp.Subscript
+    assert sub.params[0].id.name == "x"
     assert sub.params[1].values[0].start.value == 1
     assert sub.params[1].values[0].step.value == 1
     assert sub.params[1].values[0].end.value == 2
-    assert sub.params[1].values[1].name.full_name == "y"
+    assert sub.params[1].values[1].id.name == "y"
 
     sub2 = fn.body.stmts[1].rhs
     assert sub2.params[1].values[0].step.value == 2
@@ -269,8 +271,8 @@ def test_subscript():
     sub3 = fn.body.stmts[2]
     assert isinstance(sub3, synr.ast.UnassignedCall)
     assert isinstance(sub3.call, synr.ast.Call)
-    assert sub3.call.name.name == synr.ast.BuiltinOp.SubscriptAssign
-    assert sub3.call.params[0].name.full_name == "x"
+    assert sub3.call.func_name.name == synr.ast.BuiltinOp.SubscriptAssign
+    assert sub3.call.params[0].id.name == "x"
     assert isinstance(sub3.call.params[1], synr.ast.Tuple)
     assert isinstance(sub3.call.params[1].values[0], synr.ast.Slice)
     assert sub3.call.params[1].values[0].start.value == 1
@@ -278,8 +280,8 @@ def test_subscript():
     assert sub3.call.params[2].value == 3
 
     sub4 = fn.body.stmts[3].rhs
-    assert sub4.params[1].values[0].name.full_name == "y"
-    assert sub4.params[1].values[1].name.full_name == "z"
+    assert sub4.params[1].values[0].id.name == "y"
+    assert sub4.params[1].values[1].id.name == "z"
 
 
 def func_literals():
@@ -325,19 +327,32 @@ def test_type():
 
     assert isinstance(fn.ret_type, synr.ast.TypeVar)
     assert isinstance(fn.params[0].ty, synr.ast.TypeVar), fn.params[0].ty
-    assert fn.params[0].ty.name.full_name == "X"
+    assert fn.params[0].ty.id.name == "X"
 
     stmts = fn.body.stmts
-    assert stmts[0].ty.name.full_name == "test.X"
+    assert stmts[0].ty.object.id.name == "test"
+    assert stmts[0].ty.field.name == "X"
 
     assert isinstance(stmts[1].ty, synr.ast.TypeApply)
-    assert stmts[1].ty.name.full_name == "X"
-    assert stmts[1].ty.params[0].name.full_name == "Y"
+    assert stmts[1].ty.id.name == "X"
+    assert stmts[1].ty.params[0].id.name == "Y"
 
     assert isinstance(stmts[2].ty, synr.ast.TypeApply)
-    assert stmts[2].ty.name.full_name == "X"
-    assert stmts[2].ty.params[0].name.full_name == "X"
-    assert stmts[2].ty.params[1].name.full_name == "Y"
+    assert stmts[2].ty.id.name == "X"
+    assert stmts[2].ty.params[0].id.name == "X"
+    assert stmts[2].ty.params[1].id.name == "Y"
+
+
+def func_call():
+    test()
+
+
+def test_call():
+    module = to_ast(func_call)
+    fn = assert_one_fn(module, "func_call", no_params=0)
+
+    assert isinstance(fn.body.stmts[0], synr.ast.UnassignedCall)
+    assert fn.body.stmts[0].call.func_name.id.name == "test"
 
 
 class ErrorAccumulator:
@@ -430,4 +445,5 @@ if __name__ == "__main__":
     test_subscript()
     test_literals()
     test_type()
+    test_call()
     test_err_msg()

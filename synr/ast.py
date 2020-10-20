@@ -77,29 +77,14 @@ class Span:
 
 @attr.s(auto_attribs=True)
 class Id:
-    names: List[str]
-
-    @staticmethod
-    def from_str(s: str) -> "Id":
-        """Parse and Id from a `.` separated string."""
-        return Id(s.split("."))
+    name: str
 
     @staticmethod
     def invalid() -> "Id":
-        return Id([])
-
-    @property
-    def full_name(self) -> str:
-        """A `.` seperated string of the fully qualified Id"""
-        return ".".join(self.names)
-
-    @property
-    def base_name(self) -> str:
-        """Unqualified name of the Id"""
-        return self.names[-1]
+        return Id("")
 
 
-Name = str
+Name = str  # TODO: add span to this
 
 
 @attr.s(auto_attribs=True)
@@ -127,16 +112,26 @@ class Parameter(Node):
 
 @attr.s(auto_attribs=True)
 class Var(Expr):
-    name: Id
+    id: Id
 
     @staticmethod
     def invalid() -> "Var":
         return Var(Span.invalid(), Id.invalid())
 
+@attr.s(auto_attribs=True)
+class Attr(Expr):
+    object: Expr
+    field: Id
+
 
 @attr.s(auto_attribs=True)
 class TypeVar(Type):
-    name: Id
+    id: Id
+
+@attr.s(auto_attribs=True)
+class TypeAttr(Type):
+    object: Type
+    field: Id
 
 
 class BuiltinOp(Enum):
@@ -161,13 +156,13 @@ class BuiltinOp(Enum):
 
 @attr.s(auto_attribs=True)
 class TypeCall(Type):
-    name: Union[Id, BuiltinOp]
+    id: Union[Id, BuiltinOp]
     params: List[Type]
 
 
 @attr.s(auto_attribs=True)
 class TypeApply(Type):
-    name: Id
+    id: Id
     params: Sequence[Type]
 
 
@@ -178,7 +173,7 @@ class TypeTuple(Type):
 
 @attr.s(auto_attribs=True)
 class TypeConstant(Type):
-    value: Union[complex, float, int]
+    value: Union[str, type(None), bool, complex, float, int]
 
 
 @attr.s(auto_attribs=True)
@@ -194,6 +189,17 @@ class Tuple(Expr):
 
 
 @attr.s(auto_attribs=True)
+class DictLiteral(Expr):
+    keys: Sequence[Expr]
+    values: Sequence[Expr]
+
+
+@attr.s(auto_attribs=True)
+class ArrayLiteral(Expr):
+    values: Sequence[Expr]
+
+
+@attr.s(auto_attribs=True)
 class Op(Node):
     name: BuiltinOp
 
@@ -205,8 +211,9 @@ class Constant(Expr):
 
 @attr.s(auto_attribs=True)
 class Call(Expr):
-    name: Union[Var, Op]
+    func_name: Union[Var, Op]
     params: List[Expr]
+    keyword_params: Dict[Expr, Expr]
 
 
 @attr.s(auto_attribs=True)
@@ -256,8 +263,14 @@ class For(Stmt):
 @attr.s(auto_attribs=True)
 class With(Stmt):
     lhs: Expr
-    rhs: Var
+    rhs: Optional[Var]
     body: Block
+
+
+@attr.s(auto_attribs=True)
+class Assert(Stmt):
+    cond: Expr
+    msg: Optional[Expr]
 
 
 @attr.s(auto_attribs=True)

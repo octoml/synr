@@ -15,7 +15,7 @@ class DiagnosticContext:
 
 
 @attr.s(auto_attribs=True)
-class PrinterDiagnosticContext:
+class PrinterDiagnosticContext(DiagnosticContext):
     sources: Dict[str, Sequence[str]] = attr.ib(default=attr.Factory(dict))
     errors: List[Tuple[str, str, Span]] = attr.ib(default=attr.Factory(list))
 
@@ -24,6 +24,7 @@ class PrinterDiagnosticContext:
 
     def emit(self, level: str, message: str, span: Span):
         self.errors.append((level, message, span))
+        raise RuntimeError(self.render())
 
     def render(self) -> Optional[str]:
         msgs = []
