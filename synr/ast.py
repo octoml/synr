@@ -18,6 +18,7 @@ class Span:
     Line and column numbers are one indexed. The interval spanned is inclusive
     of the start and exclusive of the end.
     """
+
     filename: str
     start_line: int
     start_column: int
@@ -152,21 +153,25 @@ class Node:
 
     All AST nodes must have a span.
     """
+
     span: Span
 
 
 class Type(Node):
     """Base class of a type in the AST."""
+
     pass
 
 
 class Stmt(Node):
     """Base class of a statement in the AST."""
+
     pass
 
 
 class Expr(Node):
     """Base class of a expression in the AST."""
+
     pass
 
 
@@ -178,6 +183,7 @@ class Parameter(Node):
     -------
     `x: str` in `def my_function(x: str)`.
     """
+
     name: Name
     ty: Optional[Type]
 
@@ -191,6 +197,7 @@ class Var(Expr):
     `x` and `y` in `x = y`.
     `x` in `x + 2`.
     """
+
     id: Id
 
     @staticmethod
@@ -208,6 +215,7 @@ class Attr(Expr):
     For multiple field accesses in a row, they are grouped left to right. For
     example, `x.y.z` becomes `Attr(Attr(object='x', field='y'), field='z')`.
     """
+
     object: Expr
     field: Id
 
@@ -222,6 +230,7 @@ class TypeVar(Type):
     -------
     `X` in `y: X = 2`.
     """
+
     id: Id
 
 
@@ -235,6 +244,7 @@ class TypeAttr(Type):
     -------
     In `y: X.Z = 2`, `object` is `X` and `field` is `Z`.
     """
+
     object: Type
     field: Id
 
@@ -250,6 +260,7 @@ class BuiltinOp(Enum):
     `or` in `true or false`.
     `>` in `3 > 2`.
     """
+
     Add = auto()
     Sub = auto()
     Mul = auto()
@@ -280,6 +291,7 @@ class TypeCall(Type):
     In `x : List[type(None)]`, `type(None)` is a `TypeCall`. `type` is the
     `func_name` and `None` is `params[0]`.
     """
+
     func_name: Union[Expr, BuiltinOp]
     params: List[Type]
 
@@ -293,6 +305,7 @@ class TypeApply(Type):
     In `x: List[str]`, `List[str]` is a `TypeCall`. In this case, `List` is the
     `id`, and `str` is `params[0]`.
     """
+
     id: Id
     params: Sequence[Type]
 
@@ -305,6 +318,7 @@ class TypeTuple(Type):
     -------
     `(str, int)` in `x: (str, int)`.
     """
+
     values: Sequence[Expr]
 
 
@@ -319,6 +333,7 @@ class TypeConstant(Type):
     `1` in `x: Array[1]`.
     `None` in `def my_function() -> None:`.
     """
+
     value: Union[str, NoneType, bool, complex, float, int]
 
 
@@ -332,6 +347,7 @@ class TypeSlice(Type):
     -------
     `1:2` in `x: Array[1:2]`.
     """
+
     start: Type
     step: Type
     end: Type
@@ -345,6 +361,7 @@ class Tuple(Expr):
     -------
     `(1, 2)` in `x = (1, 2)`.
     """
+
     values: Sequence[Expr]
 
 
@@ -356,6 +373,7 @@ class DictLiteral(Expr):
     -------
     `{"x": 2}` in `x = {"x": 2}`.
     """
+
     keys: Sequence[Expr]
     values: Sequence[Expr]
 
@@ -368,6 +386,7 @@ class ArrayLiteral(Expr):
     -------
     `[1, 2]` in `x = [1, 2]`.
     """
+
     values: Sequence[Expr]
 
 
@@ -381,6 +400,7 @@ class Op(Node):
     -------
     `+` in `x = 1 + 2`.
     """
+
     name: BuiltinOp
 
 
@@ -392,6 +412,7 @@ class Constant(Expr):
     -------
     `1` in `x = 1`.
     """
+
     value: Union[str, NoneType, bool, complex, float, int]
 
 
@@ -418,6 +439,7 @@ class Call(Expr):
       `params[1]` will be a `Tuple` containing the indices (`2, 3`), and
       `params[2]` will contain the right hand side of the assignment (`y`).
     """
+
     func_name: Union[Expr, Op]
     params: List[Expr]
     keyword_params: Dict[Expr, Expr]
@@ -437,6 +459,7 @@ class Slice(Expr):
     -------
     `1:2` in `x = y[1:2]`.
     """
+
     start: Expr
     step: Expr
     end: Expr
@@ -450,6 +473,7 @@ class Return(Stmt):
     -------
     `return x`.
     """
+
     value: Optional[Expr]
 
 
@@ -461,6 +485,7 @@ class Assign(Stmt):
     -------
     In `x: int = 2`, `x` is `lhs`, `int` is `ty`, and `2` is `rhs.
     """
+
     lhs: Var
     ty: Optional[Type]
     rhs: Expr
@@ -481,6 +506,7 @@ class UnassignedCall(Stmt):
 
     `test_call()` is an `UnassignedCall`.
     """
+
     call: Call
 
 
@@ -507,6 +533,7 @@ class Block(Node):
 
     `y = 2` is a `Block`.
     """
+
     stmts: List[Stmt]
 
 
@@ -524,6 +551,7 @@ class Function(Node):
 
     `name` is `my_function`, `x: int` is `params[0]`, and `body` is `return x + 2`.
     """
+
     name: Name
     params: List[Parameter]
     ret_type: Optional[Type]
@@ -544,6 +572,7 @@ class For(Stmt):
 
     `lhs` will be `x`, `rhs` will be `range(2)`, and `body` will be `pass`.
     """
+
     lhs: Var
     rhs: Expr
     body: Block
@@ -563,6 +592,7 @@ class With(Stmt):
 
     `lhs` will be `f`, `rhs` will be `open(x)`, and `body` will be `pass`.
     """
+
     lhs: Optional[Var]
     rhs: Expr
     body: Block
@@ -576,6 +606,7 @@ class Assert(Stmt):
     -------
     In `assert 2 == 2, "Oh no!"`, `condition` is `2 == 2`, and `msg` is `"Oh no!"`.
     """
+
     condition: Expr
     msg: Optional[Expr]
 
@@ -612,6 +643,7 @@ class If(Stmt):
 
     becomes `If('x == 2', 'return x', If('x == 3', 'return "hi"', 'return 3'))`.
     """
+
     condition: Expr
     true: Block
     false: Block
@@ -634,6 +666,7 @@ class Class(Node):
     `name` is `MyClass`, `funcs["return_x"]` is `def return_x():\n    return x`,
     and `assignments[0]` is `x = 2`.
     """
+
     name: Name
     funcs: Dict[Name, Function]
     assignments: List[Assign]
@@ -642,4 +675,5 @@ class Class(Node):
 @attr.s(auto_attribs=True, frozen=True)
 class Module(Node):
     """A collection of classes and functions."""
+
     funcs: Dict[Name, Union[Class, Function]]

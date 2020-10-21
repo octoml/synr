@@ -19,6 +19,7 @@ class PrinterDiagnosticContext(DiagnosticContext):
     """Simple diagnostic context that prints the error and underlines its
     location in the source. Raises a RuntimeError on the first error hit.
     """
+
     sources: Dict[str, Sequence[str]] = attr.ib(default=attr.Factory(dict))
     errors: List[Tuple[str, str, Span]] = attr.ib(default=attr.Factory(list))
 

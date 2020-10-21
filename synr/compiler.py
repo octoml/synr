@@ -167,7 +167,10 @@ class Compiler:
                 ty = self.compile_type(stmt.returns)
             return Function(stmt_span, name, params, ty, body)
         else:
-            self.error(f"Unexpected {type(stmt)} when looking for a function definition", stmt_span)
+            self.error(
+                f"Unexpected {type(stmt)} when looking for a function definition",
+                stmt_span,
+            )
             return Function(
                 Span.invalid(), "", [], Type(Span.invalid()), Block(Span.invalid(), [])
             )
@@ -540,10 +543,14 @@ class Compiler:
                 if isinstance(assign, Assign):
                     stmts.append(assign)
                 else:
-                    self.error(f"Unexpected {type(assign)} in class definition. Only function definitions and assignments are allowed", stmt_span)
+                    self.error(
+                        f"Unexpected {type(assign)} in class definition. Only function definitions and assignments are allowed",
+                        stmt_span,
+                    )
             else:
                 self.error(
-                    "Only functions definitions and assignments are allowed within a class", stmt_span
+                    "Only functions definitions and assignments are allowed within a class",
+                    stmt_span,
                 )
         return Class(span, cls.name, funcs, stmts)
 

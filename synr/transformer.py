@@ -14,6 +14,7 @@ P = TypeVar("P")
 
 class Transformer(Generic[M, F, S, E, B, T]):
     """A visitor to handle user specified transformations on the AST."""
+
     def do_transform(
         self, node: ast.Node, diag: "DiagnosticContext"
     ) -> Union[M, F, S, E, B, P, T]:
