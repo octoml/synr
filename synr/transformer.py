@@ -49,6 +49,7 @@ class Transformer(Generic[M, F, S, E, B, T]):
         if isinstance(node, ast.Parameter):
             return self.transform_parameter(node)
         self.error(f"Unexpected synr ast type {type(node)}", node.span)
+        return None
 
     def transform_module(self, mod: ast.Module) -> M:
         pass
