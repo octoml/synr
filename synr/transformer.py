@@ -13,16 +13,26 @@ P = TypeVar("P")
 
 
 class Transformer(Generic[M, F, S, E, B, T]):
+    """A visitor to handle user specified transformations on the AST."""
     def do_transform(
         self, node: ast.Node, diag: "DiagnosticContext"
     ) -> Union[M, F, S, E, B, P, T]:
+        """Entry point for the transformation.
+
+        This is called with the synr AST and the diagnostic context used in parsing the python AST.
+        """
         self._diagnostic_context = diag
         return self.transform(node)
 
     def error(self, message, span):
+        """Report an error on a given span."""
         self._diagnostic_context.emit("error", message, span)
 
     def transform(self, node: ast.Node) -> Union[M, F, S, E, B, P, T]:
+        """Visitor function.
+
+        Call this to recurse into child nodes.
+        """
         if isinstance(node, ast.Module):
             return self.transform_module(node)
         if isinstance(node, ast.Function):
@@ -37,7 +47,7 @@ class Transformer(Generic[M, F, S, E, B, T]):
             return self.transform_block(node)
         if isinstance(node, ast.Parameter):
             return self.transform_parameter(node)
-        raise RuntimeError(f"Unexpected synr ast type {type(node)}")
+        self.error(f"Unexpected synr ast type {type(node)}", node.span)
 
     def transform_module(self, mod: ast.Module) -> M:
         pass

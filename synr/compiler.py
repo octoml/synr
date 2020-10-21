@@ -167,7 +167,7 @@ class Compiler:
                 ty = self.compile_type(stmt.returns)
             return Function(stmt_span, name, params, ty, body)
         else:
-            self.error(f"found {type(stmt)}", stmt_span)
+            self.error(f"Unexpected {type(stmt)} when looking for a function definition", stmt_span)
             return Function(
                 Span.invalid(), "", [], Type(Span.invalid()), Block(Span.invalid(), [])
             )
@@ -529,15 +529,23 @@ class Compiler:
     def compile_class(self, cls: py_ast.ClassDef) -> Class:
         span = self.span_from_ast(cls)
         funcs: Dict[Name, Function] = {}
-        for func in cls.body:
-            func_span = self.span_from_ast(func)
-            f = self.compile_def(func)
-            if not isinstance(f, Function):
+        stmts: List[Assign] = []
+        for stmt in cls.body:
+            stmt_span = self.span_from_ast(stmt)
+            if isinstance(stmt, py_ast.FunctionDef):
+                f = self.compile_def(stmt)
+                funcs[f.name] = f
+            elif isinstance(stmt, (py_ast.AnnAssign, py_ast.Assign)):
+                assign = self.compile_stmt(stmt)
+                if isinstance(assign, Assign):
+                    stmts.append(assign)
+                else:
+                    self.error(f"Unexpected {type(assign)} in class definition. Only function definitions and assignments are allowed", stmt_span)
+            else:
                 self.error(
-                    "Only functions definitions are allowed within a class", func_span
+                    "Only functions definitions and assignments are allowed within a class", stmt_span
                 )
-            funcs[f.name] = f
-        return Class(span, funcs)
+        return Class(span, cls.name, funcs, stmts)
 
 
 def to_ast(
@@ -545,11 +553,55 @@ def to_ast(
     diagnostic_ctx: DiagnosticContext,
     transformer: Optional[Transformer] = None,
 ) -> Any:
+    """Parse an abstract syntax tree from a Python program.
+
+    Examples
+    --------
+    `to_ast` can be used with a given python function or class: ::
+    .. code-block:: python
+
+        import synr
+
+        def my_function(x):
+            return x + 2
+
+        synr.to_ast(my_function, synr.PrinterDiagnosticContext())
+
+    `to_ast` can also be used with a string containing python code: ::
+    .. code-block:: python
+
+        import synr
+
+        f = "def my_function(x):\n    return x + 2"
+
+        synr.to_ast(f, synr.PrinterDiagnosticContext())
+
+
+    Parameters
+    ----------
+    program : Union[Any, str]
+        A string containing a python program or a python function or class. If
+        a python function or class is used, then line numbers will be localized
+        to the file that the function or class came from.
+    diagnostic_ctx : DiagnosticContext
+        A diagnostic context to handle reporting of errors.
+    transformer : Optional[Transformer]
+        An optional transformer to apply to the AST after parsing. The
+        transformer allows for converting from synr's AST to a user specified
+        AST using the same diagnostic context and error handling.
+
+    Returns
+    -------
+    Union[synr.ast.Module, Any]
+        A synr AST if no transformer was specified and not errors occured. Or
+        an error if one occured. Or the result of applying the transformer to
+        the synr AST.
+    """
     if isinstance(program, str):
         source_name = "<string input>"
         source = program
         full_source = source
-        start_line = 0
+        start_line = 1
     else:
         source_name = inspect.getsourcefile(program)  # type: ignore
         assert source_name, "source name must be valid"
@@ -563,7 +615,7 @@ def to_ast(
     diagnostic_ctx.add_source(source_name, full_source)
     program_ast = py_ast.parse(source)
     compiler = Compiler(source_name, start_line, transformer, diagnostic_ctx)
-    assert isinstance(program_ast, py_ast.Module), "support module"
+    assert isinstance(program_ast, py_ast.Module), "Synr only supports module inputs"
     prog = compiler.compile_module(program_ast)
     err = diagnostic_ctx.render()
     if err is not None:
