@@ -17,7 +17,7 @@ class Transformer(Generic[M, F, S, E, B, T]):
 
     def do_transform(
         self, node: ast.Node, diag: "DiagnosticContext"
-    ) -> Union[M, F, S, E, B, P, T]:
+    ) -> Union[M, F, S, E, B, P, T, None]:
         """Entry point for the transformation.
 
         This is called with the synr AST and the diagnostic context used in parsing the python AST.
@@ -29,7 +29,7 @@ class Transformer(Generic[M, F, S, E, B, T]):
         """Report an error on a given span."""
         self._diagnostic_context.emit("error", message, span)
 
-    def transform(self, node: ast.Node) -> Union[M, F, S, E, B, P, T]:
+    def transform(self, node: ast.Node) -> Union[M, F, S, E, B, P, T, None]:
         """Visitor function.
 
         Call this to recurse into child nodes.
