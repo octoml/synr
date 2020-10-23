@@ -1,3 +1,7 @@
+"""This module handles converting a synr AST into the users desired
+representation. We provide a visitor class that the user can inherit from to
+write their conversion.
+"""
 from typing import TypeVar, Generic, Union
 
 from . import ast

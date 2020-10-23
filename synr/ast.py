@@ -1,3 +1,8 @@
+"""
+`synr.ast` contains definitions of all nodes in the synr AST. This AST is
+independent of python version: different versions of python will give the same
+AST. In addition, all nodes contain span information.
+"""
 import ast as py_ast
 
 import attr
@@ -181,7 +186,7 @@ class Parameter(Node):
 
     Example
     -------
-    `x: str` in `def my_function(x: str)`.
+    :code:`x: str` in :code:`def my_function(x: str)`.
     """
 
     name: Name
@@ -194,8 +199,8 @@ class Var(Expr):
 
     Examples
     --------
-    `x` and `y` in `x = y`.
-    `x` in `x + 2`.
+    :code:`x` and :code:`y` in :code:`x = y`.
+    :code:`x` in :code:`x + 2`.
     """
 
     id: Id
@@ -211,9 +216,10 @@ class Attr(Expr):
 
     Examples
     --------
-    In `x.y`, `x` is the `object` and `y` is the `field`.
-    For multiple field accesses in a row, they are grouped left to right. For
-    example, `x.y.z` becomes `Attr(Attr(object='x', field='y'), field='z')`.
+    In :code:`x.y`, :code:`x` is the :code:`object` and :code:`y` is the
+    :code:`field`.  For multiple field accesses in a row, they are grouped left
+    to right. For example, :code:`x.y.z` becomes
+    :code:`Attr(Attr(object='x', field='y'), field='z')`.
     """
 
     object: Expr
@@ -224,11 +230,11 @@ class Attr(Expr):
 class TypeVar(Type):
     """Type variable in a type expression.
 
-    This is equivalent to `Var`, but for types.
+    This is equivalent to :code:`Var`, but for types.
 
     Example
     -------
-    `X` in `y: X = 2`.
+    :code:`X` in :code:`y: X = 2`.
     """
 
     id: Id
@@ -238,11 +244,12 @@ class TypeVar(Type):
 class TypeAttr(Type):
     """Field access in a type expression.
 
-    This is equivalent to `Attr`, but for types.
+    This is equivalent to :code:`Attr`, but for types.
 
     Example
     -------
-    In `y: X.Z = 2`, `object` is `X` and `field` is `Z`.
+    In :code:`y: X.Z = 2`, :code:`object` is :code:`X` and :code:`field` is
+    :code:`Z`.
     """
 
     object: Type
@@ -255,10 +262,10 @@ class BuiltinOp(Enum):
 
     Examples
     --------
-    `+` in `2 + 3`.
-    `[]` in `x[2]`.
-    `or` in `true or false`.
-    `>` in `3 > 2`.
+    :code:`+` in :code:`2 + 3`.
+    :code:`[]` in :code:`x[2]`.
+    :code:`or` in :code:`true or false`.
+    :code:`>` in :code:`3 > 2`.
     """
 
     Add = auto()
@@ -289,14 +296,15 @@ class BuiltinOp(Enum):
 
 @attr.s(auto_attribs=True, frozen=True)
 class TypeCall(Type):
-    """Function call in type expression.
+    """A function call in type expression.
 
-    This is equivalent to `Call`, but for type expressions.
+    This is equivalent to :code:`Call`, but for type expressions.
 
     Example
     -------
-    In `x : List[type(None)]`, `type(None)` is a `TypeCall`. `type` is the
-    `func_name` and `None` is `params[0]`.
+    In :code:`x : List[type(None)]`, :code:`type(None)` is a :code:`TypeCall`.
+    :code:`type` is the :code:`func_name` and :code:`None` is
+    :code:`params[0]`.
     """
 
     func_name: Union[Expr, BuiltinOp]
@@ -309,8 +317,8 @@ class TypeApply(Type):
 
     Example
     -------
-    In `x: List[str]`, `List[str]` is a `TypeCall`. In this case, `List` is the
-    `id`, and `str` is `params[0]`.
+    In :code:`x: List[str]`, :code:`List[str]` is a :code:`TypeCall`. In this
+    case, :code:`List` is the :code:`id`, and :code:`str` is :code:`params[0]`.
     """
 
     id: Id
@@ -319,11 +327,11 @@ class TypeApply(Type):
 
 @attr.s(auto_attribs=True, frozen=True)
 class TypeTuple(Type):
-    """Tuple in a type expression.
+    """A tuple in a type expression.
 
     Example
     -------
-    `(str, int)` in `x: (str, int)`.
+    :code:`(str, int)` in :code:`x: (str, int)`.
     """
 
     values: Sequence[Expr]
@@ -331,14 +339,14 @@ class TypeTuple(Type):
 
 @attr.s(auto_attribs=True, frozen=True)
 class TypeConstant(Type):
-    """Literal value in a type expression.
+    """A literal value in a type expression.
 
-    This is equivalent to `Constant`, but for type expressions.
+    This is equivalent to :code:`Constant`, but for type expressions.
 
     Examples
     --------
-    `1` in `x: Array[1]`.
-    `None` in `def my_function() -> None:`.
+    :code:`1` in :code:`x: Array[1]`.
+    :code:`None` in :code:`def my_function() -> None:`.
     """
 
     value: Union[str, NoneType, bool, complex, float, int]
@@ -346,13 +354,13 @@ class TypeConstant(Type):
 
 @attr.s(auto_attribs=True, frozen=True)
 class TypeSlice(Type):
-    """Slice in a type expression.
+    """A slice in a type expression.
 
-    This is equivalent to `Slice`, but for type expressions.
+    This is equivalent to :code:`Slice`, but for type expressions.
 
     Example
     -------
-    `1:2` in `x: Array[1:2]`.
+    :code:`1:2` in :code:`x: Array[1:2]`.
     """
 
     start: Type
@@ -362,11 +370,11 @@ class TypeSlice(Type):
 
 @attr.s(auto_attribs=True, frozen=True)
 class Tuple(Expr):
-    """Tuple in an expression.
+    """A tuple in an expression.
 
     Example
     -------
-    `(1, 2)` in `x = (1, 2)`.
+    :code:`(1, 2)` in :code:`x = (1, 2)`.
     """
 
     values: Sequence[Expr]
@@ -374,11 +382,11 @@ class Tuple(Expr):
 
 @attr.s(auto_attribs=True, frozen=True)
 class DictLiteral(Expr):
-    """Dictionary literal in an expression.
+    """A sictionary literal in an expression.
 
     Example
     -------
-    `{"x": 2}` in `x = {"x": 2}`.
+    :code:`{"x": 2}` in :code:`x = {"x": 2}`.
     """
 
     keys: Sequence[Expr]
@@ -387,11 +395,11 @@ class DictLiteral(Expr):
 
 @attr.s(auto_attribs=True, frozen=True)
 class ArrayLiteral(Expr):
-    """Array literal in an expression.
+    """An array literal in an expression.
 
     Example
     -------
-    `[1, 2]` in `x = [1, 2]`.
+    :code:`[1, 2]` in :code:`x = [1, 2]`.
     """
 
     values: Sequence[Expr]
@@ -399,13 +407,13 @@ class ArrayLiteral(Expr):
 
 @attr.s(auto_attribs=True, frozen=True)
 class Op(Node):
-    """Builtin operator.
+    """A builtin operator.
 
-    See `BuiltinOp` for supported operators.
+    See :code:`BuiltinOp` for supported operators.
 
     Example
     -------
-    `+` in `x = 1 + 2`.
+    :code:`+` in :code:`x = 1 + 2`.
     """
 
     name: BuiltinOp
@@ -413,11 +421,11 @@ class Op(Node):
 
 @attr.s(auto_attribs=True, frozen=True)
 class Constant(Expr):
-    """Literal value in an expression.
+    """A literal value in an expression.
 
     Example
     -------
-    `1` in `x = 1`.
+    :code:`1` in :code:`x = 1`.
     """
 
     value: Union[str, NoneType, bool, complex, float, int]
@@ -428,24 +436,27 @@ class Call(Expr):
     """A function call.
 
     Function calls can be:
-    - A regular function call of the form :python:`x.y(1, 2, z=3)`. In this
-      case, `func_name` will contain the function name (`x.y`), `params` will
-      contain the arguments (`1, 2`), and `keywords_params` will contain any
-      keyword arguments (`z=3`).
-    - A binary operation like `x + 2`. In this case, `func_name` will be the
-      binary operation from `BuiltinOp`, `params[0]` will be the left hand
-      side (`x`), and `params[1]` will be the right hand side `2`.
-    - A unary operation like `not x`. In this case, `func_name` will be the
-      unary operation from `BuiltinOp`, and `params[0]` will be the operand
-      (`x`).
-    - An array access like `x[2, y]`. In this case, `func_name` will be
-      `BuiltinOp.Subscript`, `params[0]` will be the operand (`x`), `params[1]`
-      will be a `Tuple` containing the indices (`2, y`).
-    - An array assignment like `x[2, 3] = y`. In this case, `func_name` will be
-      `BuiltinOp.SubscriptAssign`, `params[0]` will be the operand (`x`),
-      `params[1]` will be a `Tuple` containing the indices (`2, 3`), and
-      `params[2]` will contain the right hand side of the assignment (`y`).
-    """
+
+    - A regular function call of the form :code:`x.y(1, 2, z=3)`. In this case,
+      :code:`func_name` will contain the function name (`x.y`), :code:`params`
+      will contain the arguments (`1, 2`), and :code:`keywords_params` will
+      contain any keyword arguments (`z=3`).
+    - A binary operation like :code:`x + 2`. In this case, :code:`func_name`
+      will be the binary operation from :code:`BuiltinOp`, :code:`params[0]`
+      will be the left hand side (`x`), and :code:`params[1]` will be the right
+      hand side :code:`2`.
+    - A unary operation like :code:`not x`. In this case, :code:`func_name`
+      will be the unary operation from :code:`BuiltinOp`, and :code:`params[0]`
+      will be the operand (`x`).
+    - An array access like :code:`x[2, y]`. In this case, :code:`func_name`
+      will be :code:`BuiltinOp.Subscript`, :code:`params[0]` will be the
+      operand (`x`), :code:`params[1]` will be a :code:`Tuple` containing the
+      indices (`2, y`).
+    - An array assignment like :code:`x[2, 3] = y`. In this case,
+      :code:`func_name` will be :code:`BuiltinOp.SubscriptAssign`,
+      :code:`params[0]` will be the operand (`x`), :code:`params[1]` will be a
+      :code:`Tuple` containing the indices (`2, 3`), and :code:`params[2]` will
+      contain the right hand side of the assignment (`y`).  """
 
     func_name: Union[Expr, Op]
     params: List[Expr]
@@ -454,7 +465,7 @@ class Call(Expr):
 
 @attr.s(auto_attribs=True, frozen=True)
 class Slice(Expr):
-    """Slice in an expression.
+    """A slice in an expression.
 
     A slice in a range from [start,end) with step size step.
 
@@ -464,7 +475,7 @@ class Slice(Expr):
 
     Example
     -------
-    `1:2` in `x = y[1:2]`.
+    :code:`1:2` in :code:`x = y[1:2]`.
     """
 
     start: Expr
@@ -474,11 +485,11 @@ class Slice(Expr):
 
 @attr.s(auto_attribs=True, frozen=True)
 class Return(Stmt):
-    """Return statement.
+    """A return statement.
 
     Example
     -------
-    `return x`.
+    :code:`return x`.
     """
 
     value: Optional[Expr]
@@ -486,11 +497,12 @@ class Return(Stmt):
 
 @attr.s(auto_attribs=True, frozen=True)
 class Assign(Stmt):
-    """Assignment statement.
+    """An assignment statement.
 
     Example
     -------
-    In `x: int = 2`, `x` is `lhs`, `int` is `ty`, and `2` is `rhs.
+    In :code:`x: int = 2`, :code:`x` is :code:`lhs`, :code:`int` is :code:`ty`,
+    and :code:`2` is :code:`rhs`.
     """
 
     lhs: Var
@@ -504,14 +516,13 @@ class UnassignedCall(Stmt):
 
     Example
     -------
-    In ::
     .. code-block:: python
 
         def my_function():
             test_call()
             return 2
 
-    `test_call()` is an `UnassignedCall`.
+    Here :code:`test_call()` is an :code:`UnassignedCall`.
     """
 
     call: Call
@@ -523,22 +534,21 @@ class Block(Node):
 
     Examples
     --------
-    In ::
     .. code-block:: python
 
         def my_function():
             test_call()
             return 2
 
-    `test_call()\nreturn 2` is an `Block`.
 
-    In ::
+    Here :code:`test_call()` and :code:`return 2` forms a :code:`Block`.
+
     .. code-block:: python
 
         if x > 2:
             y = 2
 
-    `y = 2` is a `Block`.
+    Here :code:`y = 2` is a :code:`Block`.
     """
 
     stmts: List[Stmt]
@@ -546,17 +556,17 @@ class Block(Node):
 
 @attr.s(auto_attribs=True, frozen=True)
 class Function(Node):
-    """Function declaration.
+    """A function declaration.
 
     Example
     -------
-    In ::
     .. code-block:: python
 
         def my_function(x: int):
             return x + 2
 
-    `name` is `my_function`, `x: int` is `params[0]`, and `body` is `return x + 2`.
+    Here :code:`name` is :code:`my_function`, :code:`x: int` is
+    :code:`params[0]`, and :code:`body` is :code:`return x + 2`.
     """
 
     name: Name
@@ -571,13 +581,13 @@ class For(Stmt):
 
     Example
     -------
-    In ::
     .. code-block:: python
 
         for x in range(2):
             pass
 
-    `lhs` will be `x`, `rhs` will be `range(2)`, and `body` will be `pass`.
+    Here :code:`lhs` will be :code:`x`, :code:`rhs` will be :code:`range(2)`,
+    and :code:`body` will be :code:`pass`.
     """
 
     lhs: Var
@@ -591,13 +601,13 @@ class With(Stmt):
 
     Example
     -------
-    In ::
     .. code-block:: python
 
         with open(x) as f:
             pass
 
-    `lhs` will be `f`, `rhs` will be `open(x)`, and `body` will be `pass`.
+    Here :code:`lhs` will be :code:`f`, :code:`rhs` will be :code:`open(x)`,
+    and :code:`body` will be :code:`pass`.
     """
 
     lhs: Optional[Var]
@@ -611,7 +621,8 @@ class Assert(Stmt):
 
     Example
     -------
-    In `assert 2 == 2, "Oh no!"`, `condition` is `2 == 2`, and `msg` is `"Oh no!"`.
+    In :code:`assert 2 == 2, "Oh no!"`, :code:`condition` is :code:`2 == 2`,
+    and :code:`msg` is :code:`"Oh no!"`.
     """
 
     condition: Expr
@@ -624,11 +635,11 @@ class If(Stmt):
 
     Notes
     -----
-    An if statement with `elif` branches becomes multiple nested if statements.
+    An if statement with :code:`elif` branches becomes multiple nested if
+    statements.
 
     Examples
     --------
-    In ::
     .. code-block:: python
 
         if x == 2:
@@ -636,9 +647,11 @@ class If(Stmt):
         else:
             return 3
 
-    `condition` is `x == 2`, `true` is `return x`, and `false` is `return 3`.
+    Here :code:`condition` is :code:`x == 2`, :code:`true` is :code:`return x`,
+    and :code:`false` is :code:`return 3`.
 
-    Multiple `elif` statements become nested ifs. For example, ::
+    Multiple :code:`elif` statements become nested ifs. For example,
+
     .. code-block:: python
 
         if x == 2:
@@ -648,7 +661,7 @@ class If(Stmt):
         else:
             return 3
 
-    becomes `If('x == 2', 'return x', If('x == 3', 'return "hi"', 'return 3'))`.
+    becomes :code:`If('x == 2', 'return x', If('x == 3', 'return "hi"', 'return 3'))`.
     """
 
     condition: Expr
@@ -662,7 +675,6 @@ class Class(Node):
 
     Example
     -------
-    In ::
     .. code-block:: python
 
         class MyClass:
@@ -670,8 +682,9 @@ class Class(Node):
             def return_x():
                 return x
 
-    `name` is `MyClass`, `funcs["return_x"]` is `def return_x():\n    return x`,
-    and `assignments[0]` is `x = 2`.
+    Here :code:`name` is :code:`MyClass`, :code:`funcs["return_x"]` is
+    :code:`def return_x():\n    return x`, and :code:`assignments[0]` is
+    :code:`x = 2`.
     """
 
     name: Name

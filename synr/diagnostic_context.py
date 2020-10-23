@@ -1,3 +1,6 @@
+"""Error handling in Synr is done through a `DiagnosticContext`. This context
+accumulates errors and renders them together after parsing has finished.
+"""
 from .ast import Span
 from typing import Optional, Sequence, List, Tuple, Any, Dict
 import attr
@@ -5,12 +8,20 @@ import attr
 
 class DiagnosticContext:
     def add_source(self, name: str, source: str) -> None:
+        """Add a file with source code to the context. This will be called
+        before any call to :py:func:`emit` that contains a span in this
+        file.
+        """
         raise NotImplemented()
 
     def emit(self, level: str, message: str, span: Span) -> None:
+        """Called when an error has occured."""
         raise NotImplemented()
 
     def render(self) -> Optional[Any]:
+        """Render out all error messages. Can either return a value or raise
+        and execption.
+        """
         raise NotImplemented()
 
 

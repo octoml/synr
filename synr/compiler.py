@@ -1,4 +1,4 @@
-import attr
+"""This module contains the main compiler from the python AST to the synr AST."""
 import ast as py_ast
 import inspect
 from typing import Optional, Any, List, Union, Sequence
@@ -14,7 +14,7 @@ class Compiler:
     transformer: Optional[Transformer]
     diagnostic_ctx: DiagnosticContext
 
-    builtin_ops = {
+    _builtin_ops = {
         py_ast.Add: BuiltinOp.Add,
         py_ast.Sub: BuiltinOp.Sub,
         py_ast.Mult: BuiltinOp.Mul,
@@ -210,7 +210,7 @@ class Compiler:
                 rhs = self.compile_expr(stmt.value)
 
             if isinstance(stmt, py_ast.AugAssign):
-                op = self.builtin_ops.get(type(stmt.op))
+                op = self._builtin_ops.get(type(stmt.op))
                 op_span = lhs.span.between(rhs.span)
                 if op is None:
                     self.error(
@@ -368,7 +368,7 @@ class Compiler:
             rhs = self.compile_expr(expr.right)
             op_span = lhs.span.between(rhs.span)
             ty = type(expr.op)
-            op = self.builtin_ops.get(ty)
+            op = self._builtin_ops.get(ty)
             if op is None:
                 self.error(
                     f"Binary operator {ty} is not supported",
@@ -390,7 +390,7 @@ class Compiler:
             rhs = self.compile_expr(expr.comparators[0])
             op_span = lhs.span.between(rhs.span)
             ty2 = type(expr.ops[0])
-            op = self.builtin_ops.get(ty2)
+            op = self._builtin_ops.get(ty2)
             if op is None:
                 self.error(
                     f"Comparison operator {ty2} is not supported",
@@ -402,7 +402,7 @@ class Compiler:
             lhs = self.compile_expr(expr.operand)
             op_span = expr_span.subtract(lhs.span)
             ty3 = type(expr.op)
-            op = self.builtin_ops.get(ty3)
+            op = self._builtin_ops.get(ty3)
             if op is None:
                 self.error(
                     f"Unary operator {ty3} is not supported",
@@ -415,7 +415,7 @@ class Compiler:
             rhs = self.compile_expr(expr.values[1])
             op_span = lhs.span.between(rhs.span)
             ty4 = type(expr.op)
-            op = self.builtin_ops.get(ty4)
+            op = self._builtin_ops.get(ty4)
             if op is None:
                 self.error(
                     f"Binary operator {ty4} is not supported",
@@ -570,7 +570,9 @@ def to_ast(
 
     Examples
     --------
-    `to_ast` can be used with a given python function or class: ::
+
+    :py:func:`to_ast` can be used with a given python function or class:
+
     .. code-block:: python
 
         import synr
@@ -580,14 +582,15 @@ def to_ast(
 
         synr.to_ast(my_function, synr.PrinterDiagnosticContext())
 
-    `to_ast` can also be used with a string containing python code: ::
+
+    :py:func:`to_ast` can also be used with a string containing python code:
+
     .. code-block:: python
 
         import synr
-
-        f = "def my_function(x):\n    return x + 2"
-
+        f = "def my_function(x):\\\\n    return x + 2"
         synr.to_ast(f, synr.PrinterDiagnosticContext())
+
 
 
     Parameters
