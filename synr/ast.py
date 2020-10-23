@@ -135,15 +135,6 @@ class Span:
         return Span("", -1, -1, -1, -1)
 
 
-@attr.s(auto_attribs=True, frozen=True)
-class Id:
-    name: str
-
-    @staticmethod
-    def invalid() -> "Id":
-        return Id("")
-
-
 Name = str  # TODO: add span to this
 
 
@@ -155,6 +146,15 @@ class Node:
     """
 
     span: Span
+
+
+@attr.s(auto_attribs=True, frozen=True)
+class Id(Node):
+    name: str
+
+    @staticmethod
+    def invalid() -> "Id":
+        return Id(Span.invalid(), "")
 
 
 class Type(Node):
@@ -272,11 +272,18 @@ class BuiltinOp(Enum):
     And = auto()
     Or = auto()
     Eq = auto()
+    NotEq = auto()
     GT = auto()
     GE = auto()
     LT = auto()
     LE = auto()
     Not = auto()
+    BitOr = auto()
+    BitAnd = auto()
+    BitXor = auto()
+    USub = auto()
+    UAdd = auto()
+    Invert = auto()
     Invalid = auto()  # placeholder op if op failed to parse
 
 

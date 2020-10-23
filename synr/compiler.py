@@ -22,6 +22,7 @@ class Compiler:
         py_ast.FloorDiv: BuiltinOp.FloorDiv,
         py_ast.Mod: BuiltinOp.Mod,
         py_ast.Eq: BuiltinOp.Eq,
+        py_ast.NotEq: BuiltinOp.NotEq,
         py_ast.GtE: BuiltinOp.GE,
         py_ast.LtE: BuiltinOp.LE,
         py_ast.Gt: BuiltinOp.GT,
@@ -29,6 +30,12 @@ class Compiler:
         py_ast.Not: BuiltinOp.Not,
         py_ast.Or: BuiltinOp.Or,
         py_ast.And: BuiltinOp.And,
+        py_ast.BitOr: BuiltinOp.BitOr,
+        py_ast.BitAnd: BuiltinOp.BitAnd,
+        py_ast.BitXor: BuiltinOp.BitXor,
+        py_ast.USub: BuiltinOp.USub,
+        py_ast.UAdd: BuiltinOp.UAdd,
+        py_ast.Invert: BuiltinOp.Invert,
     }
 
     def __init__(
@@ -316,13 +323,20 @@ class Compiler:
     def compile_var(self, expr: py_ast.expr) -> Union[Var, Attr]:
         expr_span = self.span_from_ast(expr)
         if isinstance(expr, py_ast.Name):
-            return Var(expr_span, Id(expr.id))
+            return Var(expr_span, Id(expr_span, expr.id))
         if isinstance(expr, py_ast.Attribute):
             sub_var = self.compile_expr(expr.value)
-            id_span = expr_span.subtract(
-                sub_var.span
-            )  # TODO: this still includes the .
-            return Attr(expr_span, sub_var, Id(expr.attr))
+            # The name of the field we are accessing comes at the end of the
+            # span, we can just infer the span for it from counting from the
+            # end.
+            attr_span = Span(
+                expr_span.filename,
+                expr_span.end_line,
+                expr_span.end_column - len(expr.attr),
+                expr_span.end_line,
+                expr_span.end_column,
+            )
+            return Attr(expr_span, sub_var, Id(attr_span, expr.attr))
         self.error("Expected a variable name of the form a.b.c", expr_span)
         return Var.invalid()
 
@@ -376,14 +390,6 @@ class Compiler:
             rhs = self.compile_expr(expr.comparators[0])
             op_span = lhs.span.between(rhs.span)
             ty2 = type(expr.ops[0])
-            # Desugar `a != b` to `not (a == b)`
-            if ty2 == py_ast.NotEq:
-                return Call(
-                    expr_span,
-                    Op(op_span, BuiltinOp.Not),
-                    [Call(expr_span, Op(op_span, BuiltinOp.Eq), [lhs, rhs], {})],
-                    {},
-                )
             op = self.builtin_ops.get(ty2)
             if op is None:
                 self.error(

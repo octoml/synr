@@ -161,6 +161,9 @@ def func_binop():
     x //= 1
     x %= 1
     x = (1 + 3) / (4 % 2)
+    x = -1
+    x = +1
+    x = ~1
 
 
 def test_binop():
@@ -182,15 +185,7 @@ def test_binop():
     verify(stmts[4].rhs, synr.ast.BuiltinOp.FloorDiv, [1, 2])
     verify(stmts[5].rhs, synr.ast.BuiltinOp.Mod, [1, 2])
     verify(stmts[6].rhs, synr.ast.BuiltinOp.Eq, [1, 2])
-
-    assert isinstance(stmts[7].rhs, synr.ast.Call)
-    assert stmts[7].rhs.func_name.name == synr.ast.BuiltinOp.Not
-    assert len(stmts[7].rhs.params) == 1
-    call = stmts[7].rhs.params[0]
-    assert call.func_name.name == synr.ast.BuiltinOp.Eq
-    assert call.params[0].value == 1
-    assert call.params[1].value == 2
-
+    verify(stmts[7].rhs, synr.ast.BuiltinOp.NotEq, [1, 2])
     verify(stmts[8].rhs, synr.ast.BuiltinOp.GE, [1, 2])
     verify(stmts[9].rhs, synr.ast.BuiltinOp.LE, [1, 2])
     verify(stmts[10].rhs, synr.ast.BuiltinOp.LT, [1, 2])
@@ -213,6 +208,9 @@ def test_binop():
     verify_assign(stmts[18], synr.ast.BuiltinOp.Mul, [1])
     verify_assign(stmts[19], synr.ast.BuiltinOp.FloorDiv, [1])
     verify_assign(stmts[20], synr.ast.BuiltinOp.Mod, [1])
+    verify(stmts[22].rhs, synr.ast.BuiltinOp.USub, [1])
+    verify(stmts[23].rhs, synr.ast.BuiltinOp.UAdd, [1])
+    verify(stmts[24].rhs, synr.ast.BuiltinOp.Invert, [1])
 
 
 def func_if():
