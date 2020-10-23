@@ -456,7 +456,7 @@ class Call(Expr):
       :code:`func_name` will be :code:`BuiltinOp.SubscriptAssign`,
       :code:`params[0]` will be the operand (`x`), :code:`params[1]` will be a
       :code:`Tuple` containing the indices (`2, 3`), and :code:`params[2]` will
-      contain the right hand side of the assignment (`y`).  """
+      contain the right hand side of the assignment (`y`)."""
 
     func_name: Union[Expr, Op]
     params: List[Expr]
