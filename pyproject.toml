@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "synr"
-version = "0.1.0"
-description = ""
-authors = ["Jared Roesch <jroesch@octoml.ai>"]
+version = "0.2.0"
+description = "A consistent AST for Python"
+authors = ["Jared Roesch <jroesch@octoml.ai>", "Tristan Konolige <tkonolige@octoml.ai>"]
 
 [tool.poetry.dependencies]
 python = "^3.6"
