@@ -499,6 +499,11 @@ class Return(Stmt):
 class Assign(Stmt):
     """An assignment statement.
 
+    Notes
+    -----
+    Augmented assignment statements like :code:`x += 2` are translated into an
+    operator call and an assignment (i.e. `x = x + 2`).
+
     Example
     -------
     In :code:`x: int = 2`, :code:`x` is :code:`lhs`, :code:`int` is :code:`ty`,
