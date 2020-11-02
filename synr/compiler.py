@@ -356,7 +356,8 @@ class Compiler:
                 return Constant(expr_span, expr.value)
             self.error(
                 "Only float, complex, int, str, bool, and None constants are allowed. "
-                f"{type(expr.value)} was provided.", expr_span
+                f"{type(expr.value)} was provided.",
+                expr_span,
             )
             return Constant(expr_span, float("nan"))
         if isinstance(expr, py_ast.Num):

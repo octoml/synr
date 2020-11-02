@@ -367,7 +367,7 @@ def test_constants():
     assert isinstance(d, synr.ast.DictLiteral)
     k = [x.value for x in d.keys]
     v = [x.value for x in d.values]
-    assert dict(zip(k,v)) == {"test": 1, "another" : 3j}
+    assert dict(zip(k, v)) == {"test": 1, "another": 3j}
 
     ary = fn.body.stmts[1].rhs
     assert isinstance(ary, synr.ast.ArrayLiteral)
