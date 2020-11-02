@@ -347,6 +347,7 @@ class Compiler:
         if isinstance(expr, py_ast.Constant):
             if (
                 isinstance(expr.value, float)
+                or isinstance(expr.value, complex)
                 or isinstance(expr.value, int)
                 or isinstance(expr.value, str)
                 or isinstance(expr.value, type(None))
@@ -354,11 +355,14 @@ class Compiler:
             ):
                 return Constant(expr_span, expr.value)
             self.error(
-                "Only float, int, str, bool, and None constants are allowed", expr_span
+                "Only float, complex, int, str, bool, and None constants are allowed. "
+                f"{type(expr.value)} was provided.", expr_span
             )
             return Constant(expr_span, float("nan"))
         if isinstance(expr, py_ast.Num):
             return Constant(expr_span, expr.n)
+        if isinstance(expr, py_ast.Str):
+            return Constant(expr_span, expr.s)
         if isinstance(expr, py_ast.NameConstant):
             return Constant(expr_span, expr.value)
         if isinstance(expr, py_ast.Call):

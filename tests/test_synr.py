@@ -353,6 +353,31 @@ def test_call():
     assert fn.body.stmts[0].call.func_name.id.name == "test"
 
 
+def func_constants():
+    x = {"test": 1, "another": 3j}
+    y = ["an", "array", 2.0, None, True, False]
+    z = ("hi",)
+
+
+def test_constants():
+    module = to_ast(func_constants)
+    fn = assert_one_fn(module, "func_constants", no_params=0)
+
+    d = fn.body.stmts[0].rhs
+    assert isinstance(d, synr.ast.DictLiteral)
+    k = [x.value for x in d.keys]
+    v = [x.value for x in d.values]
+    assert dict(zip(k,v)) == {"test": 1, "another" : 3j}
+
+    ary = fn.body.stmts[1].rhs
+    assert isinstance(ary, synr.ast.ArrayLiteral)
+    assert [x.value for x in ary.values] == ["an", "array", 2.0, None, True, False]
+
+    t = fn.body.stmts[2].rhs
+    assert isinstance(t, synr.ast.Tuple)
+    assert [x.value for x in t.values] == ["hi"]
+
+
 class ErrorAccumulator:
     def __init__(self):
         self.errors = {}
@@ -444,4 +469,5 @@ if __name__ == "__main__":
     test_literals()
     test_type()
     test_call()
+    test_constants()
     test_err_msg()
