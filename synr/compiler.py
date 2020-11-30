@@ -70,7 +70,7 @@ class Compiler:
                 spans.append(Span.from_ast(self.filename, node.step))
             span = Span.union(spans)
         elif isinstance(node, py_ast.Index):
-            span = Span.from_ast(self.filename, node.value)
+            span = Span.from_ast(self.filename, node.value)  # type: ignore[attr-defined]
         elif isinstance(node, py_ast.keyword):
             # unfortunately this span does not include the keyword name itself
             span = Span.from_ast(self.filename, node.value)
@@ -463,14 +463,14 @@ class Compiler:
             return self.compile_slice(slice)
         # x[1:2, z] is an ExtSlice in the python ast
         if isinstance(slice, py_ast.ExtSlice):
-            slices = [self._compile_slice(d) for d in slice.dims]
+            slices = [self._compile_slice(d) for d in slice.dims]  # type: ignore[attr-defined]
             return Tuple(Span.union([s.span for s in slices]), slices)
         if isinstance(slice, py_ast.Index):
-            return self.compile_expr(slice.value)
+            return self.compile_expr(slice.value)  # type: ignore[attr-defined]
         self.error(f"Unexpected slice type {type(slice)}", self.span_from_ast(slice))
         return Expr(Span.invalid())
 
-    def compile_subscript_slice(self, slice: Union[py_ast.slice, py_ast.Expr]) -> Tuple:
+    def compile_subscript_slice(self, slice: Union[py_ast.slice, py_ast.expr]) -> Tuple:
         # In 3.9, multiple slices are just tuples
         if sys.version_info.major == 3 and sys.version_info.minor >= 9:
             s = self.compile_expr(slice)  # type: ignore
