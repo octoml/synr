@@ -2,6 +2,7 @@
 import ast as py_ast
 import inspect
 from typing import Optional, Any, List, Union, Sequence
+import sys
 
 from .ast import *
 from .diagnostic_context import DiagnosticContext
@@ -439,7 +440,7 @@ class Compiler:
             return call
         if isinstance(expr, py_ast.Subscript):
             lhs = self.compile_expr(expr.value)
-            rhs = self.compile_slice(expr.slice)
+            rhs = self.compile_subscript_slice(expr.slice)
             return Call(expr_span, Op(rhs.span, BuiltinOp.Subscript), [lhs, rhs], {})
         if isinstance(expr, py_ast.Tuple):
             return Tuple(expr_span, [self.compile_expr(x) for x in expr.elts])
@@ -451,27 +452,15 @@ class Compiler:
             )
         if isinstance(expr, py_ast.List):
             return ArrayLiteral(expr_span, [self.compile_expr(x) for x in expr.elts])
+        if isinstance(expr, py_ast.Slice):
+            return self.compile_slice(expr)
 
         self.error(f"Unexpected expression {type(expr)}", expr_span)
         return Expr(Span.invalid())
 
     def _compile_slice(self, slice: py_ast.slice) -> Expr:
         if isinstance(slice, py_ast.Slice):
-            # TODO: handle spans for slice without start and end
-            if slice.lower is None:
-                start: Expr = Constant(Span.invalid(), 0)
-            else:
-                start = self.compile_expr(slice.lower)
-            if slice.upper is None:
-                end: Expr = Constant(Span.invalid(), -1)
-            else:
-                end = self.compile_expr(slice.upper)
-            if slice.step is None:
-                step: Expr = Constant(Span.invalid(), 1)
-            else:
-                step = self.compile_expr(slice.step)
-            span = self.span_from_ast(slice)
-            return Slice(span, start, step, end)
+            return self.compile_slice(slice)
         # x[1:2, z] is an ExtSlice in the python ast
         if isinstance(slice, py_ast.ExtSlice):
             slices = [self._compile_slice(d) for d in slice.dims]
@@ -481,12 +470,33 @@ class Compiler:
         self.error(f"Unexpected slice type {type(slice)}", self.span_from_ast(slice))
         return Expr(Span.invalid())
 
-    def compile_slice(self, slice: py_ast.slice) -> Tuple:
+    def compile_subscript_slice(self, slice: py_ast.slice) -> Tuple:
+        # In 3.9, multiple slices are just tuples
+        if sys.version_info.major == 3 and sys.version_info.minor >= 9:
+            s = self.compile_expr(slice)
+        else:
+            s = self._compile_slice(slice)
         # We ensure that slices are always a tuple
-        s = self._compile_slice(slice)
         if isinstance(s, Tuple):
             return s
         return Tuple(s.span, [s])
+
+    def compile_slice(self, slice: py_ast.Slice) -> Slice:
+        # TODO: handle spans for slice without start and end
+        if slice.lower is None:
+            start: Expr = Constant(Span.invalid(), 0)
+        else:
+            start = self.compile_expr(slice.lower)
+        if slice.upper is None:
+            end: Expr = Constant(Span.invalid(), -1)
+        else:
+            end = self.compile_expr(slice.upper)
+        if slice.step is None:
+            step: Expr = Constant(Span.invalid(), 1)
+        else:
+            step = self.compile_expr(slice.step)
+        span = self.span_from_ast(slice)
+        return Slice(span, start, step, end)
 
     def compile_call(self, call: py_ast.Call) -> Call:
         kws: Dict[Expr, Expr] = dict()
