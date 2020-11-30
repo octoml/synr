@@ -470,12 +470,12 @@ class Compiler:
         self.error(f"Unexpected slice type {type(slice)}", self.span_from_ast(slice))
         return Expr(Span.invalid())
 
-    def compile_subscript_slice(self, slice: py_ast.slice) -> Tuple:
+    def compile_subscript_slice(self, slice: Union[py_ast.slice, py_ast.Expr]) -> Tuple:
         # In 3.9, multiple slices are just tuples
         if sys.version_info.major == 3 and sys.version_info.minor >= 9:
-            s = self.compile_expr(slice)
+            s = self.compile_expr(slice)  # type: ignore
         else:
-            s = self._compile_slice(slice)
+            s = self._compile_slice(slice)  # type: ignore
         # We ensure that slices are always a tuple
         if isinstance(s, Tuple):
             return s
