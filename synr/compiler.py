@@ -256,12 +256,6 @@ class Compiler:
 
         elif isinstance(stmt, py_ast.For):
             lhs = self.compile_expr(stmt.target)
-            if not isinstance(lhs, Var):
-                self.error(
-                    "Left hand side of for loop (the x in `for x in range(...)`) must be a single variable",
-                    self.span_from_ast(stmt.target),
-                )
-                lhs = Var(Span.invalid(), Id.invalid())
             rhs = self.compile_expr(stmt.iter)
             body = self.compile_block(stmt.body)
             return For(self.span_from_ast(stmt), lhs, rhs, body)
@@ -275,15 +269,7 @@ class Compiler:
             wth = stmt.items[0]
             lhs_var: Optional[Var]
             if wth.optional_vars:
-                l = self.compile_expr(wth.optional_vars)
-                if not isinstance(l, Var):
-                    self.error(
-                        "Right hand side of with statement (y in `with x as y:`) must be a variable",
-                        self.span_from_ast(wth.optional_vars),
-                    )
-                    lhs_var = Var.invalid()
-                else:
-                    lhs_var = l
+                lhs_var = self.compile_expr(wth.optional_vars)
             else:
                 lhs_var = None
             rhs = self.compile_expr(wth.context_expr)
