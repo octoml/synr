@@ -64,6 +64,7 @@ def func_for():
     for x, y in grid(5, 6):
         return x
 
+
 def test_for():
     module = to_ast(func_for)
     fn = assert_one_fn(module, "func_for", no_params=0)
