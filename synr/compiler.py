@@ -267,7 +267,7 @@ class Compiler:
                     self.span_from_asts(stmt.items),
                 )
             wth = stmt.items[0]
-            lhs_var: Optional[Var]
+            lhs_var: Optional[Expr]
             if wth.optional_vars:
                 lhs_var = self.compile_expr(wth.optional_vars)
             else:

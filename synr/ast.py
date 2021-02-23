@@ -595,7 +595,7 @@ class For(Stmt):
     and :code:`body` will be :code:`pass`.
     """
 
-    lhs: Var
+    lhs: Expr
     rhs: Expr
     body: Block
 
@@ -615,7 +615,7 @@ class With(Stmt):
     and :code:`body` will be :code:`pass`.
     """
 
-    lhs: Optional[Var]
+    lhs: Optional[Expr]
     rhs: Expr
     body: Block
 
