@@ -595,7 +595,7 @@ class For(Stmt):
     and :code:`body` will be :code:`pass`.
     """
 
-    lhs: Expr
+    lhs: Union[Var, Tuple]
     rhs: Expr
     body: Block
 
@@ -615,7 +615,7 @@ class With(Stmt):
     and :code:`body` will be :code:`pass`.
     """
 
-    lhs: Optional[Expr]
+    lhs: Optional[Union[Var, ArrayLiteral, Tuple]]
     rhs: Expr
     body: Block
 

@@ -98,6 +98,9 @@ def func_with():
     with block() as [x, y]:
         return x
 
+    with block() as ():
+        return True
+
 
 def test_with():
     module = to_ast(func_with)
@@ -122,6 +125,15 @@ def test_with():
     assert wth.lhs.values[1].id.name == "y"
     assert isinstance(wth.body.stmts[0], synr.ast.Return)
     assert wth.body.stmts[0].value.id.name == "x"
+
+    wth = fn.body.stmts[2]
+    assert isinstance(
+        wth, synr.ast.With
+    ), "Did not find With statement, found %s" % type(wth)
+    assert isinstance(wth.rhs, synr.ast.Call)
+    assert wth.rhs.func_name.id.name == "block"
+    assert isinstance(wth.lhs, synr.ast.Tuple)
+    assert len(wth.lhs.values) == 0
 
 
 def func_block():

@@ -256,6 +256,15 @@ class Compiler:
 
         elif isinstance(stmt, py_ast.For):
             lhs = self.compile_expr(stmt.target)
+            if not isinstance(lhs, Var) and (
+                not isinstance(lhs, Tuple)
+                or [x for x in lhs.values if not isinstance(x, Var)]
+            ):
+                self.error(
+                    "Left hand side of for loop (the x in `for x in range(...)`) must be variables",
+                    self.span_from_ast(stmt.target),
+                )
+                lhs = Var(Span.invalid(), Id.invalid())
             rhs = self.compile_expr(stmt.iter)
             body = self.compile_block(stmt.body)
             return For(self.span_from_ast(stmt), lhs, rhs, body)
@@ -267,9 +276,21 @@ class Compiler:
                     self.span_from_asts(stmt.items),
                 )
             wth = stmt.items[0]
-            lhs_var: Optional[Expr]
+            lhs_var: Optional[Union[Var, ArrayLiteral, Tuple]]
             if wth.optional_vars:
-                lhs_var = self.compile_expr(wth.optional_vars)
+                l = self.compile_expr(wth.optional_vars)
+                if isinstance(l, Var):
+                    lhs_var = l
+                elif (isinstance(l, ArrayLiteral) or isinstance(l, Tuple)) and not [
+                    x for x in l.values if not isinstance(x, Var)
+                ]:
+                    lhs_var = l
+                else:
+                    self.error(
+                        "Right hand side of with statement (y in `with x as y:`) must be a variable, list of var or tuple of var",
+                        self.span_from_ast(wth.optional_vars),
+                    )
+                    lhs_var = Var.invalid()
             else:
                 lhs_var = None
             rhs = self.compile_expr(wth.context_expr)
