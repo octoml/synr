@@ -71,7 +71,7 @@ def test_for():
 
     fr = fn.body.stmts[0]
     assert isinstance(fr, synr.ast.For), "Did not find for loop"
-    assert fr.lhs.id.name == "x", "For lhs is incorrect"
+    assert fr.lhs[0].id.name == "x", "For lhs is incorrect"
     assert isinstance(fr.rhs, synr.ast.Call)
     assert fr.rhs.func_name.id.name == "range"
     assert fr.rhs.params[0].value == 3
@@ -80,9 +80,9 @@ def test_for():
 
     fr = fn.body.stmts[1]
     assert isinstance(fr, synr.ast.For), "Did not find for loop"
-    assert isinstance(fr.lhs, synr.ast.Tuple)
-    assert fr.lhs.values[0].id.name == "x", "For lhs is incorrect"
-    assert fr.lhs.values[1].id.name == "y", "For lhs is incorrect"
+    assert len(fr.lhs) == 2
+    assert fr.lhs[0].id.name == "x", "For lhs is incorrect"
+    assert fr.lhs[1].id.name == "y", "For lhs is incorrect"
     assert isinstance(fr.rhs, synr.ast.Call)
     assert fr.rhs.func_name.id.name == "grid"
     assert fr.rhs.params[0].value == 5
@@ -101,6 +101,9 @@ def func_with():
     with block() as ():
         return True
 
+    with block():
+        return True
+
 
 def test_with():
     module = to_ast(func_with)
@@ -110,7 +113,7 @@ def test_with():
         wth, synr.ast.With
     ), "Did not find With statement, found %s" % type(wth)
     assert wth.rhs.id.name == "x"
-    assert wth.lhs.id.name == "y"
+    assert wth.lhs[0].id.name == "y"
     assert isinstance(wth.body.stmts[0], synr.ast.Return)
     assert wth.body.stmts[0].value.id.name == "x"
 
@@ -120,9 +123,9 @@ def test_with():
     ), "Did not find With statement, found %s" % type(wth)
     assert isinstance(wth.rhs, synr.ast.Call)
     assert wth.rhs.func_name.id.name == "block"
-    assert isinstance(wth.lhs, synr.ast.ArrayLiteral)
-    assert wth.lhs.values[0].id.name == "x"
-    assert wth.lhs.values[1].id.name == "y"
+    assert len(wth.lhs) == 2
+    assert wth.lhs[0].id.name == "x"
+    assert wth.lhs[1].id.name == "y"
     assert isinstance(wth.body.stmts[0], synr.ast.Return)
     assert wth.body.stmts[0].value.id.name == "x"
 
@@ -132,8 +135,7 @@ def test_with():
     ), "Did not find With statement, found %s" % type(wth)
     assert isinstance(wth.rhs, synr.ast.Call)
     assert wth.rhs.func_name.id.name == "block"
-    assert isinstance(wth.lhs, synr.ast.Tuple)
-    assert len(wth.lhs.values) == 0
+    assert len(wth.lhs) == 0
 
 
 def func_block():
