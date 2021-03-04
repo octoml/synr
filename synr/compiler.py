@@ -264,7 +264,7 @@ class Compiler:
                 lhs_vars = [x for x in l.values if isinstance(x, Var)]
             else:
                 self.error(
-                    "Left hand side of for loop (the x in `for x in range(...)`) must be variables",
+                    "Left hand side of for loop (the x in `for x in range(...)`) must be one or more variables",
                     self.span_from_ast(stmt.target),
                 )
                 lhs_vars = [Var(Span.invalid(), Id.invalid())]
