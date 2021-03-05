@@ -258,10 +258,17 @@ class Compiler:
             l = self.compile_expr(stmt.target)
             if isinstance(l, Var):
                 lhs_vars = [l]
-            elif isinstance(l, Tuple) and not [
-                x for x in l.values if not isinstance(x, Var)
-            ]:
-                lhs_vars = [x for x in l.values if isinstance(x, Var)]
+            elif isinstance(l, Tuple):
+                lhs_vars = []
+                for x in l.values:
+                    if isinstance(x, Var):
+                        lhs_vars.append(x)
+                    else:
+                        self.error(
+                            "Left hand side of for loop (the x in `for x in range(...)`) must be one or more variables, but gets "
+                            + str(type(x)),
+                            x.span,
+                        )
             else:
                 self.error(
                     "Left hand side of for loop (the x in `for x in range(...)`) must be one or more variables",
@@ -283,10 +290,17 @@ class Compiler:
                 l = self.compile_expr(wth.optional_vars)
                 if isinstance(l, Var):
                     lhs_vars = [l]
-                elif (isinstance(l, ArrayLiteral) or isinstance(l, Tuple)) and not [
-                    x for x in l.values if not isinstance(x, Var)
-                ]:
-                    lhs_vars = [x for x in l.values if isinstance(x, Var)]
+                elif isinstance(l, ArrayLiteral) or isinstance(l, Tuple):
+                    lhs_vars = []
+                    for x in l.values:
+                        if isinstance(x, Var):
+                            lhs_vars.append(x)
+                        else:
+                            self.error(
+                                "Right hand side of with statement (y in `with x as y:`) must be a variable, list of var or tuple of var, but gets "
+                                + str(type(x)),
+                                x.span,
+                            )
                 else:
                     self.error(
                         "Right hand side of with statement (y in `with x as y:`) must be a variable, list of var or tuple of var",
