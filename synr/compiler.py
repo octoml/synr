@@ -265,7 +265,7 @@ class Compiler:
                         lhs_vars.append(x)
                     else:
                         self.error(
-                            "Left hand side of for loop (the x in `for x in range(...)`) must be one or more variables, but <span class="x x-first x-last">it is</span> "
+                            "Left hand side of for loop (the x in `for x in range(...)`) must be one or more variables, but it is "
                             + str(type(x)),
                             x.span,
                         )
