@@ -297,7 +297,7 @@ class Compiler:
                             lhs_vars.append(x)
                         else:
                             self.error(
-                                "Right hand side of with statement (y in `with x as y:`) must be a variable, list of var or tuple of var, but gets "
+                                "Right hand side of with statement (y in `with x as y:`) must be a variable, list of var or tuple of var, but it is "
                                 + str(type(x)),
                                 x.span,
                             )
