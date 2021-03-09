@@ -255,16 +255,29 @@ class Compiler:
             return Assign(stmt_span, lhs, ty, rhs)
 
         elif isinstance(stmt, py_ast.For):
-            lhs = self.compile_expr(stmt.target)
-            if not isinstance(lhs, Var):
+            l = self.compile_expr(stmt.target)
+            if isinstance(l, Var):
+                lhs_vars = [l]
+            elif isinstance(l, Tuple):
+                lhs_vars = []
+                for x in l.values:
+                    if isinstance(x, Var):
+                        lhs_vars.append(x)
+                    else:
+                        self.error(
+                            "Left hand side of for loop (the x in `for x in range(...)`) must be one or more variables, but it is "
+                            + str(type(x)),
+                            x.span,
+                        )
+            else:
                 self.error(
-                    "Left hand side of for loop (the x in `for x in range(...)`) must be a single variable",
+                    "Left hand side of for loop (the x in `for x in range(...)`) must be one or more variables",
                     self.span_from_ast(stmt.target),
                 )
-                lhs = Var(Span.invalid(), Id.invalid())
+                lhs_vars = [Var(Span.invalid(), Id.invalid())]
             rhs = self.compile_expr(stmt.iter)
             body = self.compile_block(stmt.body)
-            return For(self.span_from_ast(stmt), lhs, rhs, body)
+            return For(self.span_from_ast(stmt), lhs_vars, rhs, body)
 
         elif isinstance(stmt, py_ast.With):
             if len(stmt.items) != 1:
@@ -273,22 +286,32 @@ class Compiler:
                     self.span_from_asts(stmt.items),
                 )
             wth = stmt.items[0]
-            lhs_var: Optional[Var]
             if wth.optional_vars:
                 l = self.compile_expr(wth.optional_vars)
-                if not isinstance(l, Var):
+                if isinstance(l, Var):
+                    lhs_vars = [l]
+                elif isinstance(l, ArrayLiteral) or isinstance(l, Tuple):
+                    lhs_vars = []
+                    for x in l.values:
+                        if isinstance(x, Var):
+                            lhs_vars.append(x)
+                        else:
+                            self.error(
+                                "Right hand side of with statement (y in `with x as y:`) must be a variable, list of var or tuple of var, but it is "
+                                + str(type(x)),
+                                x.span,
+                            )
+                else:
                     self.error(
-                        "Right hand side of with statement (y in `with x as y:`) must be a variable",
+                        "Right hand side of with statement (y in `with x as y:`) must be a variable, list of var or tuple of var",
                         self.span_from_ast(wth.optional_vars),
                     )
-                    lhs_var = Var.invalid()
-                else:
-                    lhs_var = l
+                    lhs_vars = [Var.invalid()]
             else:
-                lhs_var = None
+                lhs_vars = []
             rhs = self.compile_expr(wth.context_expr)
             body = self.compile_block(stmt.body)
-            return With(self.span_from_ast(stmt), lhs_var, rhs, body)
+            return With(self.span_from_ast(stmt), lhs_vars, rhs, body)
 
         elif isinstance(stmt, py_ast.If):
             true = self.compile_block(stmt.body)

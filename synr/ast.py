@@ -210,6 +210,9 @@ class Var(Expr):
         return Var(Span.invalid(), Id.invalid())
 
 
+Pattern = List[Var]
+
+
 @attr.s(auto_attribs=True, frozen=True)
 class Attr(Expr):
     """Field access on variable or structure or module.
@@ -595,7 +598,7 @@ class For(Stmt):
     and :code:`body` will be :code:`pass`.
     """
 
-    lhs: Var
+    lhs: Pattern
     rhs: Expr
     body: Block
 
@@ -615,7 +618,7 @@ class With(Stmt):
     and :code:`body` will be :code:`pass`.
     """
 
-    lhs: Optional[Var]
+    lhs: Pattern
     rhs: Expr
     body: Block
 
