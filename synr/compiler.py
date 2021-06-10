@@ -12,6 +12,7 @@ from .transformer import Transformer
 class Compiler:
     filename: str
     start_line: int
+    start_column: int
     transformer: Optional[Transformer]
     diagnostic_ctx: DiagnosticContext
 
@@ -43,11 +44,13 @@ class Compiler:
         self,
         filename: str,
         start_line: int,
+        start_column: int,
         transformer: Optional[Transformer],
         diagnostic_ctx: DiagnosticContext,
     ):
         self.filename = filename
         self.start_line = start_line - 1
+        self.start_column = start_column
         self.transformer = transformer
         self.diagnostic_ctx = diagnostic_ctx
 
@@ -79,9 +82,9 @@ class Compiler:
         return Span(
             span.filename,
             span.start_line + self.start_line,
-            span.start_column,
+            span.start_column + self.start_column,
             span.end_line + self.start_line,
-            span.end_column,
+            span.end_column + self.start_column,
         )
 
     def span_from_asts(self, nodes: Sequence[py_ast.AST]) -> Span:
@@ -656,11 +659,18 @@ def to_ast(
         source = program
         full_source = source
         start_line = 1
+        start_column = 0
     else:
         source_name = inspect.getsourcefile(program)  # type: ignore
         assert source_name, "source name must be valid"
         lines, start_line = inspect.getsourcelines(program)
-        source = "".join(lines)
+        start_column = 0
+        if len(lines) > 0:
+            start_column = len(lines[0]) - len(lines[0].lstrip())
+            if start_column == 0:
+                source = "".join(lines)
+            else:
+                source = "".join([l[start_column:] for l in lines])
         mod = inspect.getmodule(program)
         if mod is not None:
             full_source = inspect.getsource(mod)
@@ -668,7 +678,9 @@ def to_ast(
             full_source = source
     diagnostic_ctx.add_source(source_name, full_source)
     program_ast = py_ast.parse(source)
-    compiler = Compiler(source_name, start_line, transformer, diagnostic_ctx)
+    compiler = Compiler(
+        source_name, start_line, start_column, transformer, diagnostic_ctx
+    )
     assert isinstance(program_ast, py_ast.Module), "Synr only supports module inputs"
     prog = compiler.compile_module(program_ast)
     err = diagnostic_ctx.render()

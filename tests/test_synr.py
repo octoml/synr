@@ -500,6 +500,22 @@ def test_err_msg():
     assert errs[start + 2][0][1] == "Empty type assignment not supported"
 
 
+def test_scoped_func():
+    global_var = 0
+
+    def func():
+        return global_var
+
+    module = to_ast(func)
+    fn = assert_one_fn(module, "func", no_params=0)
+    stmts = fn.body.stmts
+    assert isinstance(stmts[0], synr.ast.Return)
+    assert stmts[0].value.id.name == "global_var"
+    _, start_line = inspect.getsourcelines(func)
+    assert stmts[0].span.start_line == start_line + 1
+    assert stmts[0].span.start_column == 9
+
+
 if __name__ == "__main__":
     test_id_function()
     test_class()
@@ -516,3 +532,4 @@ if __name__ == "__main__":
     test_call()
     test_constants()
     test_err_msg()
+    test_scoped_func()
