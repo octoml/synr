@@ -678,7 +678,9 @@ def to_ast(
             full_source = source
     diagnostic_ctx.add_source(source_name, full_source)
     program_ast = py_ast.parse(source)
-    compiler = Compiler(source_name, start_line, start_column, transformer, diagnostic_ctx)
+    compiler = Compiler(
+        source_name, start_line, start_column, transformer, diagnostic_ctx
+    )
     assert isinstance(program_ast, py_ast.Module), "Synr only supports module inputs"
     prog = compiler.compile_module(program_ast)
     err = diagnostic_ctx.render()

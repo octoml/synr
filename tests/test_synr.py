@@ -502,8 +502,10 @@ def test_err_msg():
 
 def test_scoped_func():
     global_var = 0
+
     def func():
         return global_var
+
     module = to_ast(func)
     fn = assert_one_fn(module, "func", no_params=0)
     stmts = fn.body.stmts
