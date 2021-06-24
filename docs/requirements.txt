@@ -1,1 +1,1 @@
-attrs
+attrs>=21.1.0

@@ -519,7 +519,25 @@ class Assign(Stmt):
 
 
 @attr.s(auto_attribs=True, frozen=True)
-class UnassignedCall(Stmt):
+class UnassignedExpr(Stmt):
+    """A standalone expression.
+
+    Example
+    -------
+    .. code-block:: python
+
+        def my_function():
+            '''docstring'''
+            test_call()
+
+    Here :code:`'''docstring'''` and :code:`test_call()` is an :code:`UnassignedExpr`.
+    """
+
+    expr: Expr
+
+
+@attr.s(auto_attribs=True, frozen=True, init=False)
+class UnassignedCall(UnassignedExpr):
     """A standalone function call.
 
     Example
@@ -534,6 +552,9 @@ class UnassignedCall(Stmt):
     """
 
     call: Call
+
+    def __init__(self, span: Span, call: Call):
+        self.__attrs_init__(span, call, call)  # type: ignore
 
 
 @attr.s(auto_attribs=True, frozen=True)

@@ -330,11 +330,7 @@ class Compiler:
             if isinstance(expr, Call):
                 return UnassignedCall(expr.span, expr)
             else:
-                self.error(
-                    f"Found unexpected expression of type {type(expr)} when looking for a statement",
-                    expr.span,
-                )
-                return Stmt(Span.invalid())
+                return UnassignedExpr(expr.span, expr)
 
         elif isinstance(stmt, py_ast.Assert):
             return Assert(

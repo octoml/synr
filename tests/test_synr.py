@@ -516,6 +516,18 @@ def test_scoped_func():
     assert stmts[0].span.start_column == 9
 
 
+def test_docstring():
+    def func_withdoc():
+        """this function has a docstring"""
+        return 0
+
+    module = to_ast(func_withdoc)
+    fn = assert_one_fn(module, "func_withdoc", no_params=0)
+    stmts = fn.body.stmts
+    assert isinstance(stmts[0], synr.ast.UnassignedExpr)
+    assert stmts[0].expr.value == "this function has a docstring"
+
+
 if __name__ == "__main__":
     test_id_function()
     test_class()
@@ -533,3 +545,4 @@ if __name__ == "__main__":
     test_constants()
     test_err_msg()
     test_scoped_func()
+    test_docstring()
