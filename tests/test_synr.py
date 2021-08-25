@@ -535,32 +535,36 @@ def test_local_func():
 
 
 def test_decorators():
-    code = """@A
-def foo():
-    @B
-    @C
-    def bar():
-        return 1
-    return bar()
-"""
+    def A(f):
+        return f
 
-    module = to_ast(code)
+    @A
+    def foo():
+        @B
+        @C
+        def bar():
+            return 1
+
+        return bar()
+
+    module = to_ast(foo)
     fn = assert_one_fn(module, "foo")
+    _, start_line = inspect.getsourcelines(foo)
     assert len(fn.decorators) == 1
     assert isinstance(fn.decorators[0], synr.ast.Var)
     assert fn.decorators[0].id.name == "A"
-    assert fn.decorators[0].span.start_line == 1
+    assert fn.decorators[0].span.start_line == start_line
 
     bar = fn.body.stmts[0]
     assert len(bar.decorators) == 2
 
     assert isinstance(bar.decorators[0], synr.ast.Var)
     assert bar.decorators[0].id.name == "B"
-    assert bar.decorators[0].span.start_line == 3
+    assert bar.decorators[0].span.start_line == start_line + 2
 
     assert isinstance(bar.decorators[1], synr.ast.Var)
     assert bar.decorators[1].id.name == "C"
-    assert bar.decorators[1].span.start_line == 4
+    assert bar.decorators[1].span.start_line == start_line + 3
 
 
 if __name__ == "__main__":
