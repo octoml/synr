@@ -563,24 +563,27 @@ class Block(Node):
 
 
 @attr.s(auto_attribs=True, frozen=True)
-class Function(Node):
+class Function(Stmt):
     """A function declaration.
 
     Example
     -------
     .. code-block:: python
 
+        @F
         def my_function(x: int):
             return x + 2
 
     Here :code:`name` is :code:`my_function`, :code:`x: int` is
-    :code:`params[0]`, and :code:`body` is :code:`return x + 2`.
+    :code:`params[0]`, :code:`body` is :code:`return x + 2`, and
+    :code:`decorators` is :code:`[F]`.
     """
 
     name: Name
     params: List[Parameter]
     ret_type: Optional[Type]
     body: Block
+    decorators: List[Expr]
 
 
 @attr.s(auto_attribs=True, frozen=True)
