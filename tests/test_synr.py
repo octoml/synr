@@ -516,6 +516,53 @@ def test_scoped_func():
     assert stmts[0].span.start_column == 9
 
 
+def test_local_func():
+    def foo():
+        def bar():
+            return 1
+
+        return bar()
+
+    module = to_ast(foo)
+    fn = assert_one_fn(module, "foo")
+    stmts = fn.body.stmts
+    assert isinstance(stmts[0], synr.ast.Function)
+    assert stmts[0].name == "bar"
+    assert len(stmts[0].params) == 0
+    _, start_line = inspect.getsourcelines(foo)
+    assert stmts[0].span.start_line == start_line + 1
+    assert stmts[0].span.start_column == 9
+
+
+def test_decorators():
+    code = """@A
+def foo():
+    @B
+    @C
+    def bar():
+        return 1
+    return bar()
+"""
+
+    module = to_ast(code)
+    fn = assert_one_fn(module, "foo")
+    assert len(fn.decorators) == 1
+    assert isinstance(fn.decorators[0], synr.ast.Var)
+    assert fn.decorators[0].id.name == "A"
+    assert fn.decorators[0].span.start_line == 1
+
+    bar = fn.body.stmts[0]
+    assert len(bar.decorators) == 2
+
+    assert isinstance(bar.decorators[0], synr.ast.Var)
+    assert bar.decorators[0].id.name == "B"
+    assert bar.decorators[0].span.start_line == 3
+
+    assert isinstance(bar.decorators[1], synr.ast.Var)
+    assert bar.decorators[1].id.name == "C"
+    assert bar.decorators[1].span.start_line == 4
+
+
 if __name__ == "__main__":
     test_id_function()
     test_class()

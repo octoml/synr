@@ -176,14 +176,20 @@ class Compiler:
             ty: Optional[Type] = None
             if stmt.returns is not None:
                 ty = self.compile_type(stmt.returns)
-            return Function(stmt_span, name, params, ty, body)
+            decorators = [self.compile_expr(dec) for dec in stmt.decorator_list]
+            return Function(stmt_span, name, params, ty, body, decorators)
         else:
             self.error(
                 f"Unexpected {type(stmt)} when looking for a function definition",
                 stmt_span,
             )
             return Function(
-                Span.invalid(), "", [], Type(Span.invalid()), Block(Span.invalid(), [])
+                Span.invalid(),
+                "",
+                [],
+                Type(Span.invalid()),
+                Block(Span.invalid(), []),
+                [],
             )
 
     def compile_stmt(self, stmt: py_ast.stmt) -> Stmt:
@@ -335,6 +341,9 @@ class Compiler:
                     expr.span,
                 )
                 return Stmt(Span.invalid())
+
+        elif isinstance(stmt, py_ast.FunctionDef):
+            return self.compile_def(stmt)
 
         elif isinstance(stmt, py_ast.Assert):
             return Assert(
