@@ -563,7 +563,7 @@ class Block(Node):
 
 
 @attr.s(auto_attribs=True, frozen=True)
-class Function(Node):
+class Function(Stmt):
     """A function declaration.
 
     Example
