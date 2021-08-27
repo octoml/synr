@@ -2,6 +2,7 @@ import synr
 from synr import __version__
 from typing import Any
 import inspect
+import sys
 
 
 def test_version():
@@ -555,7 +556,9 @@ def test_decorators():
     assert fn.decorators[0].id.name == "A"
     assert fn.decorators[0].span.start_line == start_line
 
-    assert fn.span.end_line == start_line + 7
+    # end_lineno was added in Python 3.8 so we check it here
+    if sys.version_info >= (3, 8):
+        assert fn.span.end_line == start_line + 7
 
     bar = fn.body.stmts[0]
     assert len(bar.decorators) == 2
