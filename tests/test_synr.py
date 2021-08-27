@@ -555,6 +555,8 @@ def test_decorators():
     assert fn.decorators[0].id.name == "A"
     assert fn.decorators[0].span.start_line == start_line
 
+    assert fn.span.end_line == start_line + 7
+
     bar = fn.body.stmts[0]
     assert len(bar.decorators) == 2
 

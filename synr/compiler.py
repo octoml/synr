@@ -679,7 +679,8 @@ def to_ast(
             if start_column == 0:
                 source = "".join(lines)
             else:
-                source = "".join([l[start_column:] for l in lines])
+                # make sure to preserve blank lines for correct spans
+                source = "".join([l if l.isspace() else l[start_column:] for l in lines])
         mod = inspect.getmodule(program)
         if mod is not None:
             full_source = inspect.getsource(mod)
