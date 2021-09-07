@@ -352,6 +352,16 @@ class Compiler:
                 None if stmt.msg is None else self.compile_expr(stmt.msg),
             )
 
+        elif isinstance(stmt, py_ast.Nonlocal):
+            return Nonlocal(
+                stmt_span, [Var(stmt_span, Id(stmt_span, name)) for name in stmt.names]
+            )
+
+        elif isinstance(stmt, py_ast.Global):
+            return Global(
+                stmt_span, [Var(stmt_span, Id(stmt_span, name)) for name in stmt.names]
+            )
+
         else:
             self.error(f"Found unexpected {type(stmt)} when compiling stmt", stmt_span)
             return Stmt(Span.invalid())

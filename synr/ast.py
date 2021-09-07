@@ -537,6 +537,42 @@ class UnassignedCall(Stmt):
 
 
 @attr.s(auto_attribs=True, frozen=True)
+class Nonlocal(Stmt):
+    """A nonlocal statement.
+
+    Example
+    -------
+    .. code-block:: python
+        x, y = 1, 2
+        def foo():
+            nonlocal x, y
+            return x
+
+    In :code:`nonlocal x, y`, :code:`vars` is :code`[x, y]`.
+    """
+
+    vars: List[Var]
+
+
+@attr.s(auto_attribs=True, frozen=True)
+class Global(Stmt):
+    """A global statement.
+
+    Example
+    -------
+    .. code-block:: python
+        x, y = 1, 2
+        def foo():
+            global x, y
+            return x
+
+    In :code:`global x, y`, :code:`vars` is :code`[x, y]`.
+    """
+
+    vars: List[Var]
+
+
+@attr.s(auto_attribs=True, frozen=True)
 class Block(Node):
     """A sequence of statements.
 

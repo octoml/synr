@@ -572,6 +572,38 @@ def test_decorators():
     assert bar.decorators[1].span.start_line == start_line + 3
 
 
+def test_nonlocal():
+    x, y = 1, 2
+
+    def foo():
+        nonlocal x, y
+        return x + y
+
+    module = to_ast(foo)
+    fn = assert_one_fn(module, "foo")
+    nl = fn.body.stmts[0]
+    assert isinstance(nl, synr.ast.Nonlocal)
+    assert len(nl.vars) == 2
+    x, y = nl.vars
+    assert isinstance(x, synr.ast.Var) and x.id.name == "x"
+    assert isinstance(y, synr.ast.Var) and y.id.name == "y"
+
+
+def test_global():
+    def foo():
+        global x, y
+        return x + y
+
+    module = to_ast(foo)
+    fn = assert_one_fn(module, "foo")
+    gl = fn.body.stmts[0]
+    assert isinstance(gl, synr.ast.Global)
+    assert len(gl.vars) == 2
+    x, y = gl.vars
+    assert isinstance(x, synr.ast.Var) and x.id.name == "x"
+    assert isinstance(y, synr.ast.Var) and y.id.name == "y"
+
+
 if __name__ == "__main__":
     test_id_function()
     test_class()
@@ -589,3 +621,7 @@ if __name__ == "__main__":
     test_constants()
     test_err_msg()
     test_scoped_func()
+    test_local_func()
+    test_decorators()
+    test_nonlocal()
+    test_global()
