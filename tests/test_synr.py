@@ -588,6 +588,10 @@ def test_nonlocal():
     assert isinstance(x, synr.ast.Var) and x.id.name == "x"
     assert isinstance(y, synr.ast.Var) and y.id.name == "y"
 
+    _, start_line = inspect.getsourcelines(foo)
+    assert nl.span.start_line == start_line + 1
+    # NOTE: variable spans are a bit hacky so we don't check them here
+
 
 def test_global():
     def foo():
@@ -602,6 +606,9 @@ def test_global():
     x, y = gl.vars
     assert isinstance(x, synr.ast.Var) and x.id.name == "x"
     assert isinstance(y, synr.ast.Var) and y.id.name == "y"
+
+    _, start_line = inspect.getsourcelines(foo)
+    assert gl.span.start_line == start_line + 1
 
 
 if __name__ == "__main__":
