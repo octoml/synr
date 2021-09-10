@@ -92,6 +92,26 @@ def test_for():
     assert fr.body.stmts[0].value.id.name == "x"
 
 
+def func_while():
+    while x < 10:
+        return x
+
+
+def test_while():
+    module = to_ast(func_while)
+    fn = assert_one_fn(module, "func_while", no_params=0)
+
+    while_stmt = fn.body.stmts[0]
+    assert isinstance(while_stmt, synr.ast.While)
+    assert isinstance(while_stmt.body.stmts[0], synr.ast.Return)
+    assert while_stmt.body.stmts[0].value.id.name == "x"
+    cond = while_stmt.condition
+    assert isinstance(cond, synr.ast.Call)
+    assert cond.func_name.name == synr.ast.BuiltinOp.LT
+    assert cond.params[0].id.name == "x"
+    assert cond.params[1].value == 10
+
+
 def func_with():
     with x as y:
         return x
@@ -615,6 +635,7 @@ if __name__ == "__main__":
     test_id_function()
     test_class()
     test_for()
+    test_while()
     test_with()
     test_block()
     test_assign()

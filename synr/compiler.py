@@ -288,6 +288,11 @@ class Compiler:
             body = self.compile_block(stmt.body)
             return For(self.span_from_ast(stmt), lhs_vars, rhs, body)
 
+        elif isinstance(stmt, py_ast.While):
+            condition = self.compile_expr(stmt.test)
+            body = self.compile_block(stmt.body)
+            return While(stmt_span, condition, body)
+
         elif isinstance(stmt, py_ast.With):
             if len(stmt.items) != 1:
                 self.error(

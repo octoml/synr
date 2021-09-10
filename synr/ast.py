@@ -643,6 +643,24 @@ class For(Stmt):
 
 
 @attr.s(auto_attribs=True, frozen=True)
+class While(Stmt):
+    """An while statement.
+
+    Examples
+    --------
+    .. code-block:: python
+
+        while x <= 2:
+            pass
+
+    Here :code:`condition` is :code:`x <= 2`, and :code:`body` will be :code:`pass`.
+    """
+
+    condition: Expr
+    body: Block
+
+
+@attr.s(auto_attribs=True, frozen=True)
 class With(Stmt):
     """A with statement.
 
