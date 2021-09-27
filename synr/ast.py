@@ -47,9 +47,7 @@ class Span:
             end_col_offset = node.end_col_offset + 1  # type: ignore
         else:
             end_col_offset = node.col_offset + 2
-        return Span(
-            filename, lineno, node.col_offset + 1, end_lineno, end_col_offset
-        )
+        return Span(filename, lineno, node.col_offset + 1, end_lineno, end_col_offset)
 
     def merge(self, span: "Span") -> "Span":
         """Return the span starting from the beginning of the first span and
