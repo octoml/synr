@@ -4,6 +4,7 @@ independent of python version: different versions of python will give the same
 AST. In addition, all nodes contain span information.
 """
 import ast as py_ast
+import sys
 
 import attr
 from enum import Enum, auto
@@ -33,16 +34,21 @@ class Span:
     @staticmethod
     def from_ast(filename: str, node: py_ast.AST) -> "Span":
         """Extract the span of a python AST node"""
+        lineno = node.lineno
+        # A workaround for function def lineno before Python 3.8
+        if isinstance(node, py_ast.FunctionDef) and sys.version_info < (3, 8):
+            lineno += len(node.decorator_list)
+
         if hasattr(node, "end_lineno") and node.end_lineno is not None:  # type: ignore
             end_lineno = node.end_lineno  # type: ignore
         else:
-            end_lineno = node.lineno
+            end_lineno = lineno
         if hasattr(node, "end_col_offset") and node.end_col_offset is not None:  # type: ignore
             end_col_offset = node.end_col_offset + 1  # type: ignore
         else:
             end_col_offset = node.col_offset + 2
         return Span(
-            filename, node.lineno, node.col_offset + 1, end_lineno, end_col_offset
+            filename, lineno, node.col_offset + 1, end_lineno, end_col_offset
         )
 
     def merge(self, span: "Span") -> "Span":
