@@ -571,6 +571,8 @@ def test_decorators():
     module = to_ast(foo)
     fn = assert_one_fn(module, "foo")
     _, start_line = inspect.getsourcelines(foo)
+    assert fn.span.start_line == start_line + 1
+
     assert len(fn.decorators) == 1
     assert isinstance(fn.decorators[0], synr.ast.Var)
     assert fn.decorators[0].id.name == "A"
@@ -581,6 +583,8 @@ def test_decorators():
         assert fn.span.end_line == start_line + 7
 
     bar = fn.body.stmts[0]
+    assert bar.span.start_line == start_line + 4
+
     assert len(bar.decorators) == 2
 
     assert isinstance(bar.decorators[0], synr.ast.Var)
