@@ -6,7 +6,7 @@ import sys
 
 
 def test_version():
-    assert __version__ == "0.1.0"
+    assert __version__ == "0.4.1"
 
 
 def to_ast(program: Any) -> Any:
