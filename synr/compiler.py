@@ -508,6 +508,10 @@ class Compiler:
             return ArrayLiteral(expr_span, [self.compile_expr(x) for x in expr.elts])
         if isinstance(expr, py_ast.Slice):
             return self.compile_slice(expr)
+        if isinstance(expr, py_ast.Lambda):
+            params = self.compile_args_to_params(expr.args)
+            body = self.compile_expr(expr.body)
+            return Lambda(expr_span, params, body)
 
         self.error(f"Unexpected expression {type(expr)}", expr_span)
         return Expr(Span.invalid())

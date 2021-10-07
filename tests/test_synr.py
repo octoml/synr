@@ -635,6 +635,28 @@ def test_global():
     assert gl.span.start_line == start_line + 1
 
 
+def test_lambda():
+    def foo():
+        return lambda x, y: x + y
+
+    module = to_ast(foo)
+    fn = assert_one_fn(module, "foo")
+
+    assert isinstance(fn.body.stmts[0], synr.ast.Return)
+    assert isinstance(fn.body.stmts[0].value, synr.ast.Lambda)
+    node = fn.body.stmts[0].value
+    assert len(node.params) == 2
+    assert node.params[0].name == "x"
+    assert node.params[0].ty == None
+    assert node.params[1].name == "y"
+    assert node.params[1].ty == None
+
+    assert isinstance(node.body, synr.ast.Call)
+    assert node.body.func_name.name == synr.ast.BuiltinOp.Add
+    assert node.body.params[0].id.name == "x"
+    assert node.body.params[1].id.name == "y"
+
+
 if __name__ == "__main__":
     test_id_function()
     test_class()
@@ -657,3 +679,4 @@ if __name__ == "__main__":
     test_decorators()
     test_nonlocal()
     test_global()
+    test_lambda()
