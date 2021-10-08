@@ -656,6 +656,9 @@ def test_lambda():
     assert node.body.params[0].id.name == "x"
     assert node.body.params[1].id.name == "y"
 
+    _, start_line = inspect.getsourcelines(foo)
+    assert node.span.start_line == start_line + 1
+
 
 if __name__ == "__main__":
     test_id_function()
