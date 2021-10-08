@@ -10,7 +10,7 @@ python = "^3.6"
 attrs = "*"
 
 [tool.poetry.dev-dependencies]
-pytest = "^5.2"
+pytest = "^6.2.4"
 black = { version = "^20.0", allow-prereleases = true }
 mypy = "^0.782"
 
