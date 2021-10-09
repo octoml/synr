@@ -178,6 +178,7 @@ def test_block():
 
 def func_assign():
     y = 2
+    x, y = 2, 2
 
 
 def test_assign():
@@ -185,10 +186,19 @@ def test_assign():
     fn = assert_one_fn(module, "func_assign", no_params=0)
     assign = fn.body.stmts[0]
     assert isinstance(assign, synr.ast.Assign)
-    assert isinstance(assign.lhs, synr.ast.Var)
-    assert assign.lhs.id.name == "y"
+    assert isinstance(assign.lhs[0], synr.ast.Var)
+    assert assign.lhs[0].id.name == "y"
     assert isinstance(assign.rhs, synr.ast.Constant)
     assert assign.rhs.value == 2
+
+    assign = fn.body.stmts[1]
+    assert isinstance(assign, synr.ast.Assign)
+
+    assert len(assign.lhs) == 2
+    assert isinstance(assign.lhs[0], synr.ast.Var)
+    assert assign.lhs[0].id.name == "x"
+    assert isinstance(assign.lhs[1], synr.ast.Var)
+    assert assign.lhs[1].id.name == "y"
 
 
 def func_var():
@@ -264,7 +274,7 @@ def test_binop():
         assert isinstance(stmt.rhs, synr.ast.Call)
         assert stmt.rhs.func_name.name == op, f"Expect {op.name}, got {stmt.id.name}"
         assert len(vals) + 1 == len(stmt.rhs.params)
-        assert stmt.lhs.id.name == stmt.rhs.params[0].id.name
+        assert stmt.lhs[0].id.name == stmt.rhs.params[0].id.name
         for i in range(len(vals)):
             assert stmt.rhs.params[i + 1].value == vals[i]
 
@@ -469,7 +479,6 @@ def to_ast_err(program: Any) -> Any:
 
 
 def func_err(x=2, *args, **kwargs):
-    x, y = 2
     x: X
 
 
@@ -517,8 +526,7 @@ def test_err_msg():
         28,
     )
 
-    assert errs[start + 1][0][1] == "Left hand side of assignment must be a variable"
-    assert errs[start + 2][0][1] == "Empty type assignment not supported"
+    assert errs[start + 1][0][1] == "Empty type assignment not supported"
 
 
 def test_scoped_func():
