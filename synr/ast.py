@@ -491,6 +491,20 @@ class Slice(Expr):
 
 
 @attr.s(auto_attribs=True, frozen=True)
+class Lambda(Expr):
+    """A lambda expression
+
+    Example
+    -------
+    In :code:`lambda x, y: x + y`, :code:`x, y` are :code:`params`,
+    :code:`x + y` is :code:`body`.
+    """
+
+    params: List[Parameter]
+    body: Expr
+
+
+@attr.s(auto_attribs=True, frozen=True)
 class Return(Stmt):
     """A return statement.
 
