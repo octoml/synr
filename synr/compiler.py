@@ -261,13 +261,13 @@ class Compiler:
                         lhs_vars.append(x)
                     else:
                         self.error(
-                            "Left hand side of assign statement (x in `x = y`) must be a variable, list of var or tuple of var, but it is "
+                            "Left hand side of assignment (x in `x = y`) must be a variable or a list of variables (`x, z = y`), but it is "
                             + str(type(x)),
                             x.span,
                         )
             else:
                 self.error(
-                    "Left hand side of assign statement (x in `x = y`) must be a variable, list of var or tuple of var",
+                    "Left hand side of assignment (x in `x = y`) must be a variable or a list of variables",
                     lhs.span,
                 )
                 lhs_vars = [Var.invalid()]
