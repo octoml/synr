@@ -252,16 +252,29 @@ class Compiler:
                         {},
                     ),
                 )
-            elif not isinstance(lhs, Var):
+            elif isinstance(lhs, Var):
+                lhs_vars = [lhs]
+            elif isinstance(lhs, ArrayLiteral) or isinstance(lhs, Tuple):
+                lhs_vars = []
+                for x in lhs.values:
+                    if isinstance(x, Var):
+                        lhs_vars.append(x)
+                    else:
+                        self.error(
+                            "Left hand side of assignment (x in `x = y`) must be a variable or a list of variables (`x, z = y`), but it is "
+                            + str(type(x)),
+                            x.span,
+                        )
+            else:
                 self.error(
-                    "Left hand side of assignment must be a variable",
+                    "Left hand side of assignment (x in `x = y`) must be a variable or a list of variables",
                     lhs.span,
                 )
-                lhs = Var(Span.invalid(), Id.invalid())
+                lhs_vars = [Var.invalid()]
             ty: Optional[Type] = None
             if isinstance(stmt, py_ast.AnnAssign):
                 ty = self.compile_type(stmt.annotation)
-            return Assign(stmt_span, lhs, ty, rhs)
+            return Assign(stmt_span, lhs_vars, ty, rhs)
 
         elif isinstance(stmt, py_ast.For):
             l = self.compile_expr(stmt.target)

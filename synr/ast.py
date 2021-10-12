@@ -531,7 +531,7 @@ class Assign(Stmt):
     and :code:`2` is :code:`rhs`.
     """
 
-    lhs: Var
+    lhs: Pattern
     ty: Optional[Type]
     rhs: Expr
 
