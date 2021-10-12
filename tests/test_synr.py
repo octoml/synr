@@ -6,7 +6,7 @@ import sys
 
 
 def test_version():
-    assert __version__ == "0.4.2"
+    assert __version__ == "0.5.0"
 
 
 def to_ast(program: Any) -> Any:
@@ -179,6 +179,8 @@ def test_block():
 def func_assign():
     y = 2
     x, y = 2, 2
+    (x, y) = 2, 2
+    [x, y] = 2, 2
 
 
 def test_assign():
@@ -191,14 +193,18 @@ def test_assign():
     assert isinstance(assign.rhs, synr.ast.Constant)
     assert assign.rhs.value == 2
 
-    assign = fn.body.stmts[1]
-    assert isinstance(assign, synr.ast.Assign)
+    def _check_multi_assign(assign):
+        assert isinstance(assign, synr.ast.Assign)
 
-    assert len(assign.lhs) == 2
-    assert isinstance(assign.lhs[0], synr.ast.Var)
-    assert assign.lhs[0].id.name == "x"
-    assert isinstance(assign.lhs[1], synr.ast.Var)
-    assert assign.lhs[1].id.name == "y"
+        assert len(assign.lhs) == 2
+        assert isinstance(assign.lhs[0], synr.ast.Var)
+        assert assign.lhs[0].id.name == "x"
+        assert isinstance(assign.lhs[1], synr.ast.Var)
+        assert assign.lhs[1].id.name == "y"
+
+    _check_multi_assign(fn.body.stmts[1])
+    _check_multi_assign(fn.body.stmts[2])
+    _check_multi_assign(fn.body.stmts[3])
 
 
 def func_var():
