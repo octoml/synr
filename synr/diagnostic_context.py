@@ -12,17 +12,17 @@ class DiagnosticContext:
         before any call to :py:func:`emit` that contains a span in this
         file.
         """
-        raise NotImplemented
+        raise NotImplementedError("You must subclass DiagnosticContext")
 
     def emit(self, level: str, message: str, span: Span) -> None:
         """Called when an error has occured."""
-        raise NotImplemented
+        raise NotImplementedError("You must subclass DiagnosticContext")
 
     def render(self) -> Optional[Any]:
         """Render out all error messages. Can either return a value or raise
         and execption.
         """
-        raise NotImplemented
+        raise NotImplementedError("You must subclass DiagnosticContext")
 
 
 @attr.s(auto_attribs=True)
