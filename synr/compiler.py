@@ -601,18 +601,28 @@ class Compiler:
                 self._expr2type(expr.end),
             )
         if isinstance(expr, Call):
-            if expr.func_name.name == BuiltinOp.Subscript:  # type: ignore
-                assert isinstance(
-                    expr.params[0], Var
-                ), f"Expected subscript call to have lhs of Var, but it is {type(expr.params[0])}"
-                assert isinstance(
-                    expr.params[1], Tuple
-                ), f"Expected subscript call to have rhs of Tuple, but it is {type(expr.params[1])}"
-                return TypeApply(
+            if isinstance(expr.func_name, Op):
+                if expr.func_name.name == BuiltinOp.Subscript:  # type: ignore
+                    assert isinstance(
+                        expr.params[1], Tuple
+                    ), f"Expected subscript call to have rhs of Tuple, but it is {type(expr.params[1])}"
+                    return TypeApply(
+                        expr.span,
+                        self._expr2type(expr.params[0]),
+                        [self._expr2type(x) for x in expr.params[1].values],
+                    )
+                return TypeCall(
                     expr.span,
-                    expr.params[0].id,
-                    [self._expr2type(x) for x in expr.params[1].values],
+                    expr.func_name.name,
+                    [self._expr2type(x) for x in expr.params],
                 )
+            elif isinstance(expr.func_name, Expr):
+                return TypeCall(
+                    expr.span,
+                    self._expr2type(expr.func_name),
+                    [self._expr2type(x) for x in expr.params],
+                )
+
         if isinstance(expr, Attr):
             return TypeAttr(expr.span, self._expr2type(expr.object), expr.field)
         self.error(f"Found unknown kind (type of type) {type(expr)}", expr.span)
