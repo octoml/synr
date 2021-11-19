@@ -6,7 +6,7 @@ authors = ["Jared Roesch <jroesch@octoml.ai>", "Tristan Konolige <tkonolige@octo
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.6"
+python = "^3.6.2"
 attrs = "*"
 
 [tool.poetry.dev-dependencies]
