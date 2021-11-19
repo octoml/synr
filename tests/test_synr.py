@@ -399,6 +399,8 @@ def func_type(x: X) -> Y:
     x: X[X, Y] = 1
     x: X[X:Y] = 1
     x: X[1] = 1
+    x: test.X[Y] = 1
+    x: test.X(Y) = 1
 
 
 def test_type():
@@ -414,13 +416,25 @@ def test_type():
     assert stmts[0].ty.field.name == "X"
 
     assert isinstance(stmts[1].ty, synr.ast.TypeApply)
-    assert stmts[1].ty.id.name == "X"
+    assert stmts[1].ty.func_name.id.name == "X"
     assert stmts[1].ty.params[0].id.name == "Y"
 
     assert isinstance(stmts[2].ty, synr.ast.TypeApply)
-    assert stmts[2].ty.id.name == "X"
+    assert stmts[2].ty.func_name.id.name == "X"
     assert stmts[2].ty.params[0].id.name == "X"
     assert stmts[2].ty.params[1].id.name == "Y"
+
+    assert isinstance(stmts[5].ty, synr.ast.TypeApply)
+    assert isinstance(stmts[5].ty.func_name, synr.ast.TypeAttr)
+    assert stmts[5].ty.func_name.object.id.name == "test"
+    assert stmts[5].ty.func_name.field.name == "X"
+    assert stmts[5].ty.params[0].id.name == "Y"
+
+    assert isinstance(stmts[6].ty, synr.ast.TypeCall)
+    assert isinstance(stmts[6].ty.func_name, synr.ast.TypeAttr)
+    assert stmts[6].ty.func_name.object.id.name == "test"
+    assert stmts[6].ty.func_name.field.name == "X"
+    assert stmts[6].ty.params[0].id.name == "Y"
 
 
 def func_call():

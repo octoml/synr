@@ -314,7 +314,7 @@ class TypeCall(Type):
     :code:`params[0]`.
     """
 
-    func_name: Union[Expr, BuiltinOp]
+    func_name: Type
     params: List[Type]
 
 
@@ -328,7 +328,7 @@ class TypeApply(Type):
     case, :code:`List` is the :code:`id`, and :code:`str` is :code:`params[0]`.
     """
 
-    id: Id
+    func_name: Type
     params: Sequence[Type]
 
 
