@@ -614,7 +614,7 @@ class Compiler:
                 return TypeCall(
                     expr.span,
                     expr.func_name.name,
-                    [self._expr2type(x) for x in expr.params]
+                    [self._expr2type(x) for x in expr.params],
                 )
             elif isinstance(expr.func_name, Expr):
                 return TypeCall(
