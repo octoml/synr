@@ -325,7 +325,8 @@ class TypeApply(Type):
     Example
     -------
     In :code:`x: List[str]`, :code:`List[str]` is a :code:`TypeCall`. In this
-    case, :code:`List` is the :code:`id`, and :code:`str` is :code:`params[0]`.
+    case, :code:`List` is the :code:`func_name`, and :code:`str` is
+    :code:`params[0]`.
     """
 
     func_name: Type
