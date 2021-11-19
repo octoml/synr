@@ -314,7 +314,7 @@ class TypeCall(Type):
     :code:`params[0]`.
     """
 
-    func_name: Type
+    func_name: Union[Type, BuiltinOp]
     params: List[Type]
 
 
