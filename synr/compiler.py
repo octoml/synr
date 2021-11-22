@@ -611,7 +611,7 @@ class Compiler:
                         self._expr2type(expr.params[0]),
                         [self._expr2type(x) for x in expr.params[1].values],
                     )
-                return TypeCall( Stashed changes
+                return TypeCall(
                     expr.span,
                     expr.func_name.name,
                     [self._expr2type(x) for x in expr.params],
