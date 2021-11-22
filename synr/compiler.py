@@ -727,10 +727,10 @@ def to_ast(
             else:
                 # make sure to preserve blank lines for correct spans
                 source = "\n".join([l[start_column:].rstrip() for l in lines])
-        mod = inspect.getmodule(program)
-        if mod is not None:
-            full_source = inspect.getsource(mod)
-        else:
+        try:
+            full_source, _ = inspect.findsource(program)
+            full_source = "".join(full_source)
+        except:
             full_source = source
     diagnostic_ctx.add_source(source_name, full_source)
     program_ast = py_ast.parse(source)
