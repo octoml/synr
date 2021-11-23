@@ -402,6 +402,7 @@ def func_type(x: X) -> Y:
     x: test.X[Y] = 1
     x: test.X(Y) = 1
     x: X + Y = 1
+    x: test.X(Y_TYPE=Y) = 1
 
 
 def test_type():
@@ -441,6 +442,15 @@ def test_type():
     assert stmts[7].ty.func_name == synr.ast.BuiltinOp.Add
     assert stmts[7].ty.params[0].id.name == "X"
     assert stmts[7].ty.params[1].id.name == "Y"
+
+    # test TypeCall with kwargs
+    assert isinstance(stmts[8].ty, synr.ast.TypeCall)
+    assert isinstance(stmts[8].ty.func_name, synr.ast.TypeAttr)
+    assert stmts[8].ty.func_name.object.id.name == "test"
+    assert stmts[8].ty.func_name.field.name == "X"
+    for k, v in stmts[8].ty.keyword_params.items():
+        assert k.value == "Y_TYPE"
+        assert v.id.name == "Y"
 
 
 def func_call():
