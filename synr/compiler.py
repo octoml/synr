@@ -657,6 +657,39 @@ class Compiler:
         return Class(span, cls.name, funcs, stmts)
 
 
+def _get_full_source(program: Any, source: str) -> str:
+    """Get full source code of the program
+
+    Parameters
+    ----------
+    program : Any
+        The python function or class.
+
+    source : str
+        The source code of the program without other codes in the same file.
+
+    Returns
+    -------
+    str
+        The full source code
+    """
+    try:
+        # It will cause a problem when running in Jupyter Notebook.
+        # `mod` will be <module '__main__'>, which is a built-in module
+        # and `getsource` will throw a TypeError
+        mod = inspect.getmodule(program)
+        if mod is not None:
+            return inspect.getsource(mod)
+        else:
+            return source
+    except TypeError:
+        # It's a work around for Jupyter problem.
+        # Since `findsource` is an internal API of inspect, we just use it
+        # as a fallback method.
+        full_source, _ = inspect.findsource(program)
+        return "".join(full_source)
+
+
 def to_ast(
     program: Union[Any, str],
     diagnostic_ctx: DiagnosticContext,
@@ -727,11 +760,8 @@ def to_ast(
             else:
                 # make sure to preserve blank lines for correct spans
                 source = "\n".join([l[start_column:].rstrip() for l in lines])
-        try:
-            full_source, _ = inspect.findsource(program)
-            full_source = "".join(full_source)
-        except:
-            full_source = source
+        full_source = _get_full_source(program, source)
+
     diagnostic_ctx.add_source(source_name, full_source)
     program_ast = py_ast.parse(source)
     compiler = Compiler(
