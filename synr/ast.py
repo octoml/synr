@@ -316,7 +316,7 @@ class TypeCall(Type):
 
     func_name: Union[Type, BuiltinOp]
     params: List[Type]
-    keyword_params: Dict[Id, Type]
+    keyword_params: Dict[Type, Type]
 
 
 @attr.s(auto_attribs=True, frozen=True)
