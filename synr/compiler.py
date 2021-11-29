@@ -615,12 +615,17 @@ class Compiler:
                     expr.span,
                     expr.func_name.name,
                     [self._expr2type(x) for x in expr.params],
+                    {},
                 )
             elif isinstance(expr.func_name, Expr):
                 return TypeCall(
                     expr.span,
                     self._expr2type(expr.func_name),
                     [self._expr2type(x) for x in expr.params],
+                    {
+                        self._expr2type(key): self._expr2type(value)
+                        for key, value in expr.keyword_params.items()
+                    },
                 )
 
         if isinstance(expr, Attr):
