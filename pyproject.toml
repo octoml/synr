@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "synr"
-version = "0.5.0"
+version = "0.6.0"
 description = "A consistent AST for Python"
 authors = ["Jared Roesch <jroesch@octoml.ai>", "Tristan Konolige <tkonolige@octoml.ai>"]
 readme = "README.md"

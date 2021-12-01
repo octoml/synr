@@ -8,7 +8,7 @@ Synr provides
 - Line and column information for every node in the AST.
 """
 
-__version__ = "0.5.0"
+__version__ = "0.6.0"
 
 from .compiler import to_ast
 from .diagnostic_context import PrinterDiagnosticContext, DiagnosticContext
