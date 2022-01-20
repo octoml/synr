@@ -252,6 +252,24 @@ class Compiler:
                         {},
                     ),
                 )
+            # if the lhs is a field, we replace the whole expression with a AttrAssign
+            elif (
+                isinstance(lhs, Attr)
+            ):
+                return UnassignedCall(
+                    stmt_span,
+                    Call(
+                        stmt_span,
+                        Op(lhs.span, BuiltinOp.AttrAssign),
+                        [
+
+                            lhs.object,
+                            lhs.field,
+                            rhs,
+                        ],
+                        {},
+                    ),
+                )
             elif isinstance(lhs, Var):
                 lhs_vars = [lhs]
             elif isinstance(lhs, ArrayLiteral) or isinstance(lhs, Tuple):

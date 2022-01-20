@@ -220,6 +220,33 @@ def test_var():
     assert ret.value.object.object.id.name == "x"
 
 
+def func_assign_attr():
+    x.y.z = 5
+
+
+def test_assign_attr():
+    module = to_ast(func_assign_attr)
+    fn = assert_one_fn(module, "func_assign_attr", no_params=0)
+    assign = fn.body.stmts[0]
+    assert isinstance(assign, synr.ast.UnassignedCall)
+    call = assign.call
+    assert isinstance(call, synr.ast.Call)
+    assert call.func_name.name == synr.ast.BuiltinOp.AttrAssign
+    params = call.params
+    assert len(params) == 3
+    # params[0] is x.y
+    assert isinstance(params[0], synr.ast.Attr)
+    assert isinstance(params[0].object, synr.ast.Var)
+    assert params[0].object.id.name == "x"
+    assert params[0].field.name == "y"
+    # params[1] is z
+    assert isinstance(params[1], synr.ast.Id)
+    assert params[1].name == "z"
+    # params[2] is rhs
+    assert isinstance(params[2], synr.ast.Constant)
+    assert params[2].value == 5
+
+
 def func_binop():
     x = 1 + 2
     x = 1 - 2

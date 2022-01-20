@@ -283,6 +283,7 @@ class BuiltinOp(Enum):
     Mod = auto()
     Subscript = auto()
     SubscriptAssign = auto()
+    AttrAssign = auto()
     And = auto()
     Or = auto()
     Eq = auto()
