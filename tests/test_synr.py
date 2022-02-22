@@ -246,6 +246,9 @@ def func_binop():
     x = -1
     x = +1
     x = ~1
+    x = 2 ** 3
+    x = 1 << 10
+    x = 8 >> 2
 
 
 def test_binop():
@@ -293,6 +296,9 @@ def test_binop():
     verify(stmts[22].rhs, synr.ast.BuiltinOp.USub, [1])
     verify(stmts[23].rhs, synr.ast.BuiltinOp.UAdd, [1])
     verify(stmts[24].rhs, synr.ast.BuiltinOp.Invert, [1])
+    verify(stmts[25].rhs, synr.ast.BuiltinOp.Pow, [2, 3])
+    verify(stmts[26].rhs, synr.ast.BuiltinOp.LShift, [1, 10])
+    verify(stmts[27].rhs, synr.ast.BuiltinOp.RShift, [8, 2])
 
 
 def func_if():

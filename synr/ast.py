@@ -298,6 +298,9 @@ class BuiltinOp(Enum):
     USub = auto()
     UAdd = auto()
     Invert = auto()
+    Pow = auto()
+    LShift = auto()
+    RShift = auto()
     Invalid = auto()  # placeholder op if op failed to parse
 
 
