@@ -38,6 +38,9 @@ class Compiler:
         py_ast.USub: BuiltinOp.USub,
         py_ast.UAdd: BuiltinOp.UAdd,
         py_ast.Invert: BuiltinOp.Invert,
+        py_ast.LShift: BuiltinOp.LShift,
+        py_ast.RShift: BuiltinOp.RShift,
+        py_ast.Pow: BuiltinOp.Pow,
     }
 
     def __init__(
